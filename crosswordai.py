@@ -642,7 +642,7 @@ class CruciverbaApp:
                 self.status_label.config(text=f"✅ PDF compilato salvato", fg='#27ae60')
             except Exception as e:
                 messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
-        def esporta_pdf_schema_vuoto(self):
+    def esporta_pdf_schema_vuoto(self):
         """Esporta solo lo schema vuoto con caselle nere in PDF"""
         if not self.generatore:
             messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
