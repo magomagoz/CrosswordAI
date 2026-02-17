@@ -450,13 +450,13 @@ class CruciverbaGeneratorIncrementale:
                                 if self._ottieni_parole_per_lunghezza(l)]
         
         if not lunghezze_disponibili:
-            return False
+        return False
         
         lunghezza_iniziale = random.choice(lunghezze_disponibili)
         parole_iniziali = self._ottieni_parole_per_lunghezza(lunghezza_iniziale)
         
         if not parole_iniziali:
-            return False
+        return False
         
         # Posiziona la parola iniziale
         parola_iniziale = random.choice(parole_iniziali).upper()
