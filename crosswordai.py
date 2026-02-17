@@ -329,6 +329,61 @@ class CruciverbaGeneratorIncrementale:
         if 0 <= riga < self.righe and 0 <= col < self.colonne:
             self.griglia[riga][col] = '#'
 
+    # Sostituisci dalla riga 255 alla riga 330 con questo:
+
+    def _verifica_confini_orizzontali(self, riga, col, lunghezza):
+        """Verifica che ai lati della parola ci siano bordi o caselle nere"""
+        # Controlla sinistra
+        if col > 0 and self.griglia[riga][col - 1] not in ['#', '.']:
+            return False
+        # Controlla destra
+        if col + lunghezza < self.colonne and self.griglia[riga][col + lunghezza] not in ['#', '.']:
+            return False
+        return True
+    
+    def _verifica_confini_verticali(self, riga, col, lunghezza):
+        """Verifica che sopra e sotto la parola ci siano bordi o caselle nere"""
+        # Controlla sopra
+        if riga > 0 and self.griglia[riga - 1][col] not in ['#', '.']:
+            return False
+        # Controlla sotto
+        if riga + lunghezza < self.righe and self.griglia[riga + lunghezza][col] not in ['#', '.']:
+            return False
+        return True
+    
+    def _inserisci_parola_orizzontale(self, parola, riga, col):
+        """Inserisce una parola orizzontale con caselle nere ai lati"""
+        # Inserisci la parola
+        for k, lettera in enumerate(parola):
+            self.griglia[riga][col + k] = lettera
+        
+        # Aggiungi casella nera a sinistra se necessario
+        if col > 0 and self.griglia[riga][col - 1] == '.':
+            self.griglia[riga][col - 1] = '#'
+        
+        # Aggiungi casella nera a destra se necessario
+        if col + len(parola) < self.colonne and self.griglia[riga][col + len(parola)] == '.':
+            self.griglia[riga][col + len(parola)] = '#'
+        
+        self.parole_orizzontali.append((parola, riga, col))
+    
+    def _inserisci_parola_verticale(self, parola, riga, col):
+        """Inserisce una parola verticale con caselle nere sopra e sotto"""
+        # Inserisci la parola
+        for k, lettera in enumerate(parola):
+            self.griglia[riga + k][col] = lettera
+        
+        # Aggiungi casella nera sopra se necessario
+        if riga > 0 and self.griglia[riga - 1][col] == '.':
+            self.griglia[riga - 1][col] = '#'
+        
+        # Aggiungi casella nera sotto se necessario
+        if riga + len(parola) < self.righe and self.griglia[riga + len(parola)][col] == '.':
+            self.griglia[riga + len(parola)][col] = '#'
+        
+        self.parole_verticali.append((parola, riga, col))        
+        self.parole_verticali.append((parola, riga, col))
+    
     def _trova_lettere_isolate(self):
         """Trova celle con lettere che non fanno parte di parole complete"""
         isolate = []
@@ -379,151 +434,186 @@ class CruciverbaGeneratorIncrementale:
         return incroci
 
     def genera(self):
-        """Genera un cruciverba incrementalmente"""
-        try:
-            # Resetta la griglia
-            self.griglia = [['.' for _ in range(self.colonne)] for _ in range(self.righe)]
-            self.parole_orizzontali = []
-            self.parole_verticali = []
+    """Genera un cruciverba incrementalmente con caselle nere ai bordi"""
+    try:
+        # Resetta la griglia
+        self.griglia = [['.' for _ in range(self.colonne)] for _ in range(self.righe)]
+        self.parole_orizzontali = []
+        self.parole_verticali = []
+        
+        # PASSO 1: Inserisci una parola orizzontale iniziale al centro
+        centro_riga = self.righe // 2
+        centro_col = self.colonne // 2
+        
+        # Scegli una lunghezza per la parola iniziale
+        lunghezze_disponibili = [l for l in range(4, min(self.colonne, 8)) 
+                                if self._ottieni_parole_per_lunghezza(l)]
+        
+        if not lunghezze_disponibili:
+            return False
+        
+        lunghezza_iniziale = random.choice(lunghezze_disponibili)
+        parole_iniziali = self._ottieni_parole_per_lunghezza(lunghezza_iniziale)
+        
+        if not parole_iniziali:
+            return False
+        
+        # Posiziona la parola iniziale
+        parola_iniziale = random.choice(parole_iniziali).upper()
+        col_inizio = max(0, min(centro_col - lunghezza_iniziale // 2, 
+                               self.colonne - lunghezza_iniziale))
+        
+        self._inserisci_parola_orizzontale(parola_iniziale, centro_riga, col_inizio)
+        
+        # PASSO 2: Aggiungi parole verticali che incrociano quella orizzontale
+        for k, lettera in enumerate(parola_iniziale):
+            col_incrocio = col_inizio + k
             
-            # PASSO 1: Inserisci una parola orizzontale iniziale al centro
-            centro_riga = self.righe // 2
-            centro_col = self.colonne // 2
-            
-            # Scegli una lunghezza per la parola iniziale
-            lunghezze_disponibili = [l for l in range(4, min(self.colonne, 8)) 
-                                    if self._ottieni_parole_per_lunghezza(l)]
-            
-            if not lunghezze_disponibili:
-                return False
-            
-            lunghezza_iniziale = random.choice(lunghezze_disponibili)
-            parole_iniziali = self._ottieni_parole_per_lunghezza(lunghezza_iniziale)
-            
-            if not parole_iniziali:
-                return False
-            
-            # Posiziona la parola iniziale
-            parola_iniziale = random.choice(parole_iniziali).upper()
-            col_inizio = max(0, min(centro_col - lunghezza_iniziale // 2, 
-                                   self.colonne - lunghezza_iniziale))
-            
-            self._inserisci_parola_orizzontale(parola_iniziale, centro_riga, col_inizio)
-            
-            # PASSO 2: Aggiungi parole verticali che incrociano quella orizzontale
-            for k, lettera in enumerate(parola_iniziale):
-                col_incrocio = col_inizio + k
+            # Cerca parole verticali che contengono questa lettera nella posizione giusta
+            for lunghezza_v in range(3, min(self.righe, 7)):
+                parole_v = self._ottieni_parole_per_lunghezza(lunghezza_v)
                 
-                # Cerca parole verticali che iniziano con questa lettera
-                for lunghezza_v in range(3, min(self.righe, 7)):
-                    parole_v = [p for p in self._ottieni_parole_per_lunghezza(lunghezza_v) 
-                               if p[0].upper() == lettera]
+                # Filtra parole che hanno la lettera in qualche posizione
+                parole_candidate = []
+                for p in parole_v:
+                    p_upper = p.upper()
+                    for pos, lett in enumerate(p_upper):
+                        if lett == lettera:
+                            parole_candidate.append((p_upper, pos))
+                
+                if parole_candidate:
+                    # Scegli una parola casuale
+                    parola_v, pos_lettera = random.choice(parole_candidate)
                     
-                    if parole_v:
-                        parola_v = random.choice(parole_v).upper()
-                        
-                        # Calcola posizione di partenza per centrare l'incrocio
-                        riga_inizio = centro_riga - (parola_v.find(lettera))
-                        
-                        if riga_inizio >= 0 and riga_inizio + lunghezza_v <= self.righe:
-                            if self._posizione_libera_verticale(riga_inizio, col_incrocio, lunghezza_v):
-                                if self._parola_compatibile_verticale(parola_v, riga_inizio, col_incrocio):
-                                    self._inserisci_parola_verticale(parola_v, riga_inizio, col_incrocio)
-            
-            # PASSO 3: Aggiungi altre parole orizzontali che incrociano le verticali
-            for _ in range(3):  # Prova ad aggiungere fino a 3 orizzontali
-                punti_incrocio = self._trova_punti_incrocio()
-                if not punti_incrocio:
-                    break
-                
-                # Scegli un punto di incrocio casuale
-                riga, col = random.choice(punti_incrocio)
-                
-                # Espandi a sinistra e destra per trovare la lunghezza massima
-                sinistra = col
-                while sinistra > 0 and self.griglia[riga][sinistra - 1] == '.':
-                    sinistra -= 1
-                
-                destra = col
-                while destra < self.colonne - 1 and self.griglia[riga][destra + 1] == '.':
-                    destra += 1
-                
-                lunghezza_max = destra - sinistra + 1
-                
-                if lunghezza_max >= 3:
-                    # Prova diverse lunghezze
-                    for lunghezza in range(min(lunghezza_max, 7), 2, -1):
-                        parole_oriz = self._ottieni_parole_per_lunghezza(lunghezza)
-                        if not parole_oriz:
-                            continue
-                        
-                        # Cerca parole compatibili con le lettere già esistenti
-                        for parola in random.sample(parole_oriz, min(len(parole_oriz), 10)):
-                            parola = parola.upper()
-                            if self._parola_compatibile_orizzontale(parola, riga, sinistra):
-                                self._inserisci_parola_orizzontale(parola, riga, sinistra)
+                    # Calcola posizione di partenza
+                    riga_inizio = centro_riga - pos_lettera
+                    
+                    if riga_inizio >= 0 and riga_inizio + lunghezza_v <= self.righe:
+                        # Verifica che lo spazio sia libero
+                        libero = True
+                        for idx in range(lunghezza_v):
+                            cella = self.griglia[riga_inizio + idx][col_incrocio]
+                            if cella != '.' and cella != parola_v[idx]:
+                                libero = False
                                 break
-                        else:
-                            continue
-                        break
-            
-            # PASSO 4: Aggiungi altre parole verticali
-            for _ in range(2):
-                punti_incrocio = self._trova_punti_incrocio()
-                if not punti_incrocio:
-                    break
-                
-                riga, col = random.choice(punti_incrocio)
-                
-                # Espandi in alto e basso
-                alto = riga
-                while alto > 0 and self.griglia[alto - 1][col] == '.':
-                    alto -= 1
-                
-                basso = riga
-                while basso < self.righe - 1 and self.griglia[basso + 1][col] == '.':
-                    basso += 1
-                
-                lunghezza_max = basso - alto + 1
-                
-                if lunghezza_max >= 3:
-                    for lunghezza in range(min(lunghezza_max, 7), 2, -1):
-                        parole_vert = self._ottieni_parole_per_lunghezza(lunghezza)
-                        if not parole_vert:
-                            continue
                         
-                        for parola in random.sample(parole_vert, min(len(parole_vert), 10)):
-                            parola = parola.upper()
-                            if self._parola_compatibile_verticale(parola, alto, col):
-                                self._inserisci_parola_verticale(parola, alto, col)
-                                break
-                        else:
-                            continue
-                        break
-            
-            # PASSO 5: Riempi le celle rimanenti con caselle nere
+                        # Verifica i confini verticali
+                        if libero and self._verifica_confini_verticali(riga_inizio, col_incrocio, lunghezza_v):
+                            self._inserisci_parola_verticale(parola_v, riga_inizio, col_incrocio)
+        
+        # PASSO 3: Aggiungi altre parole orizzontali
+        for _ in range(3):
+            # Trova possibili punti di incrocio
+            punti_incrocio = []
             for i in range(self.righe):
                 for j in range(self.colonne):
-                    if self.griglia[i][j] == '.':
-                        self._aggiungi_casella_nera(i, j)
+                    if self.griglia[i][j] not in ['.', '#']:
+                        # Questo è un incrocio esistente
+                        # Cerca spazi orizzontali liberi che passano per questo punto
+                        sinistra = j
+                        while sinistra > 0 and self.griglia[i][sinistra - 1] == '.':
+                            sinistra -= 1
+                        
+                        destra = j
+                        while destra < self.colonne - 1 and self.griglia[i][destra + 1] == '.':
+                            destra += 1
+                        
+                        if destra - sinistra + 1 >= 3:
+                            punti_incrocio.append((i, sinistra, destra - sinistra + 1))
             
-            # PASSO 6: Verifica che tutte le parole siano valide
-            tutte_parole = self.parole_orizzontali + self.parole_verticali
+            if not punti_incrocio:
+                break
             
-            # Calcola percentuale caselle nere
-            totale_nere = sum(1 for riga in self.griglia for cella in riga if cella == '#')
-            percentuale_nere = (totale_nere / (self.righe * self.colonne)) * 100
+            # Scegli un punto di incrocio
+            riga, col_inizio, lunghezza_max = random.choice(punti_incrocio)
             
-            # Accetta se tra il 15% e il 30% di caselle nere e almeno 4 parole totali
-            if len(tutte_parole) >= 4 and 10 <= percentuale_nere <= 35:
-                return True
-            else:
-                return False
-            
-        except Exception as e:
-            st.error(f"Errore nella generazione: {e}")
-            return False
-
+            # Prova diverse lunghezze
+            for lunghezza in range(min(lunghezza_max, 7), 2, -1):
+                parole_oriz = self._ottieni_parole_per_lunghezza(lunghezza)
+                if not parole_oriz:
+                    continue
+                
+                # Costruisci il pattern delle lettere già presenti
+                pattern = []
+                for k in range(lunghezza):
+                    cella = self.griglia[riga][col_inizio + k]
+                    if cella not in ['.', '#']:
+                        pattern.append((k, cella))
+                
+                # Filtra parole compatibili
+                parole_candidate = []
+                for p in parole_oriz:
+                    p_upper = p.upper()
+                    compatibile = True
+                    for pos, lettera in pattern:
+                        if p_upper[pos] != lettera:
+                            compatibile = False
+                            break
+                    if compatibile:
+                        parole_candidate.append(p_upper)
+                
+                if parole_candidate and self._verifica_confini_orizzontali(riga, col_inizio, lunghezza):
+                    parola_scelta = random.choice(parole_candidate)
+                    self._inserisci_parola_orizzontale(parola_scelta, riga, col_inizio)
+                    break
+        
+        # PASSO 4: Riempi le celle rimanenti con caselle nere
+        for i in range(self.righe):
+            for j in range(self.colonne):
+                if self.griglia[i][j] == '.':
+                    self.griglia[i][j] = '#'
+        
+        # PASSO 5: Verifica che tutte le parole siano valide
+        # Raccogli tutte le parole dalla griglia
+        self.parole_orizzontali = []
+        self.parole_verticali = []
+        
+        # Trova parole orizzontali
+        for i in range(self.righe):
+            j = 0
+            while j < self.colonne:
+                if self.griglia[i][j] not in ['#', '.']:
+                    inizio = j
+                    parola = ""
+                    while j < self.colonne and self.griglia[i][j] not in ['#', '.']:
+                        parola += self.griglia[i][j]
+                        j += 1
+                    if len(parola) >= 3 and self.dizionario.parola_esiste(parola):
+                        self.parole_orizzontali.append((parola, i, inizio))
+                    else:
+                        j += 1
+                else:
+                    j += 1
+        
+        # Trova parole verticali
+        for j in range(self.colonne):
+            i = 0
+            while i < self.righe:
+                if self.griglia[i][j] not in ['#', '.']:
+                    inizio = i
+                    parola = ""
+                    while i < self.righe and self.griglia[i][j] not in ['#', '.']:
+                        parola += self.griglia[i][j]
+                        i += 1
+                    if len(parola) >= 3 and self.dizionario.parola_esiste(parola):
+                        self.parole_verticali.append((parola, inizio, j))
+                    else:
+                        i += 1
+                else:
+                    i += 1
+        
+        # Calcola percentuale caselle nere
+        totale_nere = sum(1 for riga in self.griglia for cella in riga if cella == '#')
+        percentuale_nere = (totale_nere / (self.righe * self.colonne)) * 100
+        
+        # Accetta se ci sono almeno 4 parole totali
+        tutte_parole = self.parole_orizzontali + self.parole_verticali
+        return len(tutte_parole) >= 4
+        
+    except Exception as e:
+        st.error(f"Errore nella generazione: {e}")
+        return False
+        
 # ==================== FUNZIONI PER ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
     """Genera un file TXT con il cruciverba"""
