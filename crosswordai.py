@@ -434,7 +434,7 @@ class CruciverbaGeneratorIncrementale:
         return incroci
 
     def genera(self):
-    """Genera un cruciverba incrementalmente con caselle nere ai bordi"""
+        """Genera un cruciverba incrementalmente con caselle nere ai bordi"""
     try:
         # Resetta la griglia
         self.griglia = [['.' for _ in range(self.colonne)] for _ in range(self.righe)]
