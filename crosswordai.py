@@ -2,8 +2,6 @@ import streamlit as st
 import sqlite3
 import random
 from datetime import datetime
-import pandas as pd
-import base64
 import io
 
 # ==================== DIZIONARIO ITALIANO ====================
@@ -104,9 +102,10 @@ class DizionarioItaliano:
                     pass
             
             self.conn.commit()
-
+            
     def get_parole_by_lunghezza(self, lunghezza):
         """Restituisce tutte le parole di una data lunghezza."""
+        # CORREZIONE: Aggiunto il parametro lunghezza nella query e corretto validata
         self.cursor.execute("SELECT parola FROM parole WHERE lunghezza=? AND validata=1", (lunghezza,))
         return [row[0] for row in self.cursor.fetchall()]
 
@@ -143,14 +142,14 @@ class CruciverbaGenerator:
     
     def griglia_html(self):
         """Restituisce la griglia in formato HTML per una visualizzazione migliore"""
-        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px;">'
+        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px; margin: 0 auto;">'
         for riga in self.griglia:
             html += '<tr>'
             for cella in riga:
                 if cella == '.':
-                    html += '<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: black;">&nbsp;</td>'
+                    html += '<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: black;">&nbsp;</td>'
                 else:
-                    html += f'<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: white;">{cella}</td>'
+                    html += f'<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white; font-weight: bold;">{cella}</td>'
             html += '</tr>'
         html += '</table>'
         return html
@@ -173,16 +172,16 @@ class CruciverbaGenerator:
                             numero += 1
         
         # Crea HTML
-        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px;">'
+        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px; margin: 0 auto;">'
         for i in range(self.righe):
             html += '<tr>'
             for j in range(self.colonne):
                 if self.griglia[i][j] == '.':
-                    html += '<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: black;">&nbsp;</td>'
+                    html += '<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: black;">&nbsp;</td>'
                 elif (i, j) in numeri_posizioni:
-                    html += f'<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: white; position: relative;"><span style="font-size: 10px; position: absolute; top: 2px; left: 2px;">{numeri_posizioni[(i, j)]}</span>&nbsp;</td>'
+                    html += f'<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white; position: relative;"><span style="font-size: 11px; position: absolute; top: 2px; left: 2px; font-weight: bold;">{numeri_posizioni[(i, j)]}</span>&nbsp;</td>'
                 else:
-                    html += '<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: white;">&nbsp;</td>'
+                    html += '<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white;">&nbsp;</td>'
             html += '</tr>'
         html += '</table>'
         
@@ -228,52 +227,62 @@ class CruciverbaGenerator:
 
     def genera(self):
         """Genera un cruciverba con parole casuali"""
-        self.griglia = [['.' for _ in range(self.colonne)] for _ in range(self.righe)]
-        self.parole_inserite = []
-        
-        parole_disponibili = {}
-        for lunghezza in range(2, max(self.righe, self.colonne) + 1):
-            parole_disponibili[lunghezza] = self.dizionario.get_parole_by_lunghezza(lunghezza)
-        
-        # Inserisci parole orizzontali
-        for i in range(0, self.righe, 2):
-            lunghezza = random.randint(3, min(self.colonne, 8))
-            if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
-                parola = random.choice(parole_disponibili[lunghezza]).upper()
-                for _ in range(10):
-                    j = random.randint(0, self.colonne - lunghezza)
-                    libera = True
-                    for k in range(lunghezza):
-                        if self.griglia[i][j + k] != '.':
-                            libera = False
+        try:
+            self.griglia = [['.' for _ in range(self.colonne)] for _ in range(self.righe)]
+            self.parole_inserite = []
+            
+            parole_disponibili = {}
+            for lunghezza in range(2, max(self.righe, self.colonne) + 1):
+                parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
+                if parole:
+                    parole_disponibili[lunghezza] = parole
+            
+            if not parole_disponibili:
+                return False
+            
+            # Inserisci parole orizzontali
+            for i in range(0, self.righe, 2):
+                lunghezza = random.randint(3, min(self.colonne, 8))
+                if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
+                    parola = random.choice(parole_disponibili[lunghezza]).upper()
+                    for _ in range(10):
+                        j = random.randint(0, self.colonne - lunghezza)
+                        libera = True
+                        for k in range(lunghezza):
+                            if self.griglia[i][j + k] != '.':
+                                libera = False
+                                break
+                        if libera:
+                            for k, lettera in enumerate(parola):
+                                self.griglia[i][j + k] = lettera
+                            self.parole_inserite.append((parola, i, j, 'orizzontale'))
                             break
-                    if libera:
-                        for k, lettera in enumerate(parola):
-                            self.griglia[i][j + k] = lettera
-                        self.parole_inserite.append((parola, i, j, 'orizzontale'))
-                        break
-        
-        # Inserisci parole verticali
-        for j in range(1, self.colonne, 2):
-            lunghezza = random.randint(3, min(self.righe, 8))
-            if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
-                parola = random.choice(parole_disponibili[lunghezza]).upper()
-                for _ in range(10):
-                    i = random.randint(0, self.righe - lunghezza)
-                    libera = True
-                    for k in range(lunghezza):
-                        cella = self.griglia[i + k][j]
-                        if cella != '.' and cella != parola[k]:
-                            libera = False
+            
+            # Inserisci parole verticali
+            for j in range(1, self.colonne, 2):
+                lunghezza = random.randint(3, min(self.righe, 8))
+                if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
+                    parola = random.choice(parole_disponibili[lunghezza]).upper()
+                    for _ in range(10):
+                        i = random.randint(0, self.righe - lunghezza)
+                        libera = True
+                        for k in range(lunghezza):
+                            cella = self.griglia[i + k][j]
+                            if cella != '.' and cella != parola[k]:
+                                libera = False
+                                break
+                        if libera:
+                            for k, lettera in enumerate(parola):
+                                self.griglia[i + k][j] = lettera
+                            self.parole_inserite.append((parola, i, j, 'verticale'))
                             break
-                    if libera:
-                        for k, lettera in enumerate(parola):
-                            self.griglia[i + k][j] = lettera
-                        self.parole_inserite.append((parola, i, j, 'verticale'))
-                        break
-        
-        tutte_parole = self._trova_parole_orizzontali() + self._trova_parole_verticali()
-        return len(tutte_parole) > 0
+            
+            tutte_parole = self._trova_parole_orizzontali() + self._trova_parole_verticali()
+            return len(tutte_parole) > 0
+            
+        except Exception as e:
+            st.error(f"Errore nella generazione: {e}")
+            return False
 
 # ==================== FUNZIONI PER ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
@@ -287,9 +296,16 @@ def genera_txt(generatore, includi_lettere=True):
     else:
         output.write("SCHEMA CRUCIVERBA VUOTO\n")
         output.write("="*40 + "\n\n")
-        griglia_vuota, _ = generatore.griglia_vuota_html()
-        # Converti HTML in testo semplice
-        output.write("(Visualizza la versione HTML per lo schema con numeri)\n\n")
+        
+        # Versione testo semplice dello schema vuoto
+        for i in range(generatore.righe):
+            riga = ""
+            for j in range(generatore.colonne):
+                if generatore.griglia[i][j] == '.':
+                    riga += "█ "  # Blocco per casella nera
+                else:
+                    riga += "□ "  # Quadrato vuoto
+            output.write(riga + "\n")
     
     # Aggiungi definizioni
     output.write("\n\nDEFINIZIONI\n")
@@ -322,7 +338,8 @@ def main():
     
     # Inizializza il dizionario nella sessione
     if 'dizionario' not in st.session_state:
-        st.session_state.dizionario = DizionarioItaliano()
+        with st.spinner("Inizializzazione database..."):
+            st.session_state.dizionario = DizionarioItaliano()
     
     if 'generatore' not in st.session_state:
         st.session_state.generatore = None
@@ -336,8 +353,8 @@ def main():
     with st.sidebar:
         st.header("⚙️ Impostazioni")
         
-        righe = st.number_input("Numero di righe", min_value=5, max_value=20, value=10, step=1)
-        colonne = st.number_input("Numero di colonne", min_value=5, max_value=20, value=10, step=1)
+        righe = st.number_input("Numero di righe", min_value=5, max_value=15, value=8, step=1)
+        colonne = st.number_input("Numero di colonne", min_value=5, max_value=15, value=8, step=1)
         
         st.markdown("---")
         
@@ -348,7 +365,7 @@ def main():
                 if successo:
                     st.success("Cruciverba generato con successo!")
                 else:
-                    st.error("Impossibile generare il cruciverba. Riprova.")
+                    st.error("Impossibile generare il cruciverba. Riprova con dimensioni diverse.")
         
         st.markdown("---")
         
@@ -429,7 +446,7 @@ def main():
         st.subheader("🎯 Anteprima")
         st.markdown("""
         Il generatore creerà cruciverba con:
-        - Parole casuali dal database italiano
+        - Parole casuali dal database italiano (oltre 70 parole)
         - Definizioni automatiche
         - Due visualizzazioni: compilata e schema vuoto
         - Esportazione in formato TXT
