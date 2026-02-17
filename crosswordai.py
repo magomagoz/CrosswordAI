@@ -12,7 +12,7 @@ class DizionarioItaliano:
             4: ["CASA", "CANE", "SOLE", "LUNA", "MARE", "DOPO", "SOLE", "LUNA", 
                 "AUTO", "PANE", "VINO", "ARIA", "VITA"],
             5: ["MORTE", "TEMPO", "PRIMA", "FIORE", "ACQUA", "TERRA",
-                "FUOCO", "AMORE", "NOTTE", "ROSSO", "VERDE",
+                "FUOCO", "AMORE", "NOTTE", "ROSSO", "VERDE"]
         }
         
         # Per ricerca rapida
