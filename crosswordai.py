@@ -14,18 +14,20 @@ class DizionarioItalianoAPI:
             3: ["re", "tre", "sei", "oro", "via", "ira", "era", "ora", "due", "qua", "la", "ra", "tre", "uno", "che", "chi", "nel", "del", "con", "per", "tra", "fra"],
             4: ["casa", "cane", "gatto", "libro", "sole", "luna", "mare", "monte", "fiore", "albero", "auto", "treno", "pane", "vino", "acqua", "fuoco", "terra", "aria", "amico", "scuola", "amore", "tempo", "vita", "morte", "notte", "giorno", "anno", "mese", "porta", "carta", "penna", "banco"],
             5: ["scuola", "amore", "tempo", "vita", "morte", "notte", "giorno", "estate", "inverno", "primavera", "autunno", "casa", "cane", "gatto", "libro", "sole", "luna", "mare", "monte", "fiore", "albero", "auto", "treno", "pane", "vino", "acqua", "fuoco", "terra", "aria"],
-            6: ["scuola", "amore", "tempo", "vita", "morte", "notte", "giorno", "estate", "inverno", "primavera", "autunno", "giardino", "cucina", "bagno", "camera", "salone", "letto", "sedia", "tavolo"],
-            7: ["giardino", "cucina", "bagno", "camera", "salone", "scuola", "amore", "tempo", "vita", "morte", "notte", "giorno", "estate", "inverno"]
         }
         
         # Cache per le definizioni
         self.cache_definizioni = {}
         
     def get_parole_by_lunghezza(self, lunghezza):
-        """Restituisce parole di una data lunghezza (prima via API, poi fallback locale)"""
-        # Per velocità, usiamo le liste base
+        """Restituisce parole di una data lunghezza"""
         if lunghezza in self.parole_base:
             return self.parole_base[lunghezza]
+        # Se la lunghezza non è disponibile, usa la più vicina
+        if lunghezza < 3:
+            return self.parole_base.get(3, [])
+        if lunghezza > 5:
+            return self.parole_base.get(5, [])
         return []
     
     def get_definizione(self, parola):
@@ -39,7 +41,7 @@ class DizionarioItalianoAPI:
         # Prova API
         try:
             url = f"https://api.dictionaryapi.dev/api/v2/entries/it/{parola_lower}"
-            response = requests.get(url, timeout=2)  # Timeout breve per iPad
+            response = requests.get(url, timeout=2)
             
             if response.status_code == 200:
                 data = response.json()
@@ -83,8 +85,8 @@ class DizionarioItalianoAPI:
         except:
             return "Definizione non disponibile"
 
-# ==================== GENERATORE CRUCIVERBA LEGGERO ====================
-class CruciverbaGeneratoreLeggero:
+# ==================== GENERATORE CRUCIVERBA ROBUSTO ====================
+class CruciverbaGeneratoreRobusto:
     def __init__(self, righe, colonne, dizionario):
         self.righe = righe
         self.colonne = colonne
@@ -94,8 +96,8 @@ class CruciverbaGeneratoreLeggero:
         self.parole_verticali = []
         
     def griglia_html(self, mostra_lettere=True):
-        """Restituisce la griglia in formato HTML (leggero per iPad)"""
-        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px; margin: 0 auto; width: 100%;">'
+        """Restituisce la griglia in formato HTML"""
+        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 18px; margin: 0 auto; width: 100%; background-color: white;">'
         
         # Calcola numeri se necessario
         numeri_posizioni = {}
@@ -116,15 +118,15 @@ class CruciverbaGeneratoreLeggero:
             for j in range(self.colonne):
                 cella = self.griglia[i][j]
                 if cella == '#':
-                    html += '<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: black;">&nbsp;</td>'
+                    html += '<td style="border: 2px solid black; width: 40px; height: 40px; text-align: center; background-color: black;">&nbsp;</td>'
                 elif cella == '.':
-                    html += '<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white;">&nbsp;</td>'
+                    html += '<td style="border: 2px solid black; width: 40px; height: 40px; text-align: center; background-color: white;">&nbsp;</td>'
                 elif not mostra_lettere and (i, j) in numeri_posizioni:
-                    html += f'<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white; font-size: 14px; font-weight: bold;">{numeri_posizioni[(i, j)]}</td>'
+                    html += f'<td style="border: 2px solid black; width: 40px; height: 40px; text-align: center; background-color: white; font-size: 16px; font-weight: bold;">{numeri_posizioni[(i, j)]}</td>'
                 elif not mostra_lettere:
-                    html += '<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white;">&nbsp;</td>'
+                    html += '<td style="border: 2px solid black; width: 40px; height: 40px; text-align: center; background-color: white;">&nbsp;</td>'
                 else:
-                    html += f'<td style="border: 1px solid black; width: 35px; height: 35px; text-align: center; background-color: white; font-weight: bold;">{cella}</td>'
+                    html += f'<td style="border: 2px solid black; width: 40px; height: 40px; text-align: center; background-color: white; font-weight: bold; font-size: 18px;">{cella}</td>'
             html += '</tr>'
         html += '</table>'
         return html
@@ -133,31 +135,45 @@ class CruciverbaGeneratoreLeggero:
         """Verifica se c'è spazio per una parola orizzontale"""
         if col + lunghezza > self.colonne:
             return False
-        for k in range(lunghezza):
-            if self.griglia[riga][col + k] != '.':
-                return False
-        return True
+        try:
+            for k in range(lunghezza):
+                if self.griglia[riga][col + k] != '.':
+                    return False
+            return True
+        except IndexError:
+            return False
 
     def _verifica_spazio_verticale(self, riga, col, lunghezza):
         """Verifica se c'è spazio per una parola verticale"""
         if riga + lunghezza > self.righe:
             return False
-        for k in range(lunghezza):
-            if self.griglia[riga + k][col] != '.':
-                return False
-        return True
+        try:
+            for k in range(lunghezza):
+                if self.griglia[riga + k][col] != '.':
+                    return False
+            return True
+        except IndexError:
+            return False
 
     def _inserisci_parola_orizzontale(self, parola, riga, col):
         """Inserisce una parola orizzontale"""
-        for k, lettera in enumerate(parola):
-            self.griglia[riga][col + k] = lettera
-        self.parole_orizzontali.append((parola, riga, col))
+        try:
+            for k, lettera in enumerate(parola):
+                self.griglia[riga][col + k] = lettera
+            self.parole_orizzontali.append((parola, riga, col))
+            return True
+        except IndexError:
+            return False
 
     def _inserisci_parola_verticale(self, parola, riga, col):
         """Inserisce una parola verticale"""
-        for k, lettera in enumerate(parola):
-            self.griglia[riga + k][col] = lettera
-        self.parole_verticali.append((parola, riga, col))
+        try:
+            for k, lettera in enumerate(parola):
+                self.griglia[riga + k][col] = lettera
+            self.parole_verticali.append((parola, riga, col))
+            return True
+        except IndexError:
+            return False
 
     def genera(self):
         """Genera un cruciverba semplice ma funzionale"""
@@ -167,45 +183,73 @@ class CruciverbaGeneratoreLeggero:
             self.parole_orizzontali = []
             self.parole_verticali = []
             
-            # PAROLE ORIZZONTALI (2-3 parole)
-            parole_oriz_inserite = 0
-            for riga in [0, 2, 4]:  # Righe specifiche
-                if riga >= self.righe:
+            # Determina quante parole inserire in base alla dimensione
+            num_parole_oriz = min(2, self.righe)
+            num_parole_vert = min(2, self.colonne)
+            
+            # PAROLE ORIZZONTALI
+            righe_disponibili = list(range(self.righe))
+            random.shuffle(righe_disponibili)
+            
+            for _ in range(num_parole_oriz):
+                if not righe_disponibili:
+                    break
+                riga = righe_disponibili.pop()
+                
+                # Scegli lunghezza appropriata
+                lunghezza_max = min(4, self.colonne)
+                if lunghezza_max < 3:
                     continue
                     
-                lunghezza = min(4, self.colonne)
-                parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
-                if parole:
-                    parola = random.choice(parole).upper()
-                    col = random.randint(0, self.colonne - lunghezza)
-                    if self._verifica_spazio_orizzontale(riga, col, lunghezza):
-                        self._inserisci_parola_orizzontale(parola, riga, col)
-                        parole_oriz_inserite += 1
+                for lunghezza in range(lunghezza_max, 2, -1):
+                    parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
+                    if not parole:
+                        continue
+                    
+                    # Prova diverse posizioni
+                    for _ in range(5):  # 5 tentativi
+                        col = random.randint(0, max(0, self.colonne - lunghezza))
+                        if self._verifica_spazio_orizzontale(riga, col, lunghezza):
+                            parola = random.choice(parole).upper()
+                            if self._inserisci_parola_orizzontale(parola, riga, col):
+                                break
+                    break
             
-            # PAROLE VERTICALI (2-3 parole)
-            parole_vert_inserite = 0
-            for col in [1, 3]:  # Colonne specifiche
-                if col >= self.colonne:
+            # PAROLE VERTICALI
+            colonne_disponibili = list(range(self.colonne))
+            random.shuffle(colonne_disponibili)
+            
+            for _ in range(num_parole_vert):
+                if not colonne_disponibili:
+                    break
+                col = colonne_disponibili.pop()
+                
+                lunghezza_max = min(4, self.righe)
+                if lunghezza_max < 3:
                     continue
                     
-                lunghezza = min(4, self.righe)
-                parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
-                if parole:
-                    parola = random.choice(parole).upper()
-                    riga = random.randint(0, self.righe - lunghezza)
-                    if self._verifica_spazio_verticale(riga, col, lunghezza):
-                        self._inserisci_parola_verticale(parola, riga, col)
-                        parole_vert_inserite += 1
+                for lunghezza in range(lunghezza_max, 2, -1):
+                    parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
+                    if not parole:
+                        continue
+                    
+                    for _ in range(5):
+                        riga = random.randint(0, max(0, self.righe - lunghezza))
+                        if self._verifica_spazio_verticale(riga, col, lunghezza):
+                            parola = random.choice(parole).upper()
+                            if self._inserisci_parola_verticale(parola, riga, col):
+                                break
+                    break
             
-            # CASELLE NERE (circa 10-15%)
+            # CASELLE NERE (circa 10%)
             celle_totali = self.righe * self.colonne
-            max_nere = int(celle_totali * 0.12)  # 12%
+            max_nere = int(celle_totali * 0.10)
             nere_inserite = 0
             
             for i in range(self.righe):
                 for j in range(self.colonne):
                     if self.griglia[i][j] == '.' and nere_inserite < max_nere:
-                        if random.random() < 0.25:  # 25% di probabilità
+                        if random.random() < 0.2:  # 20% di probabilità
                             self.griglia[i][j] = '#'
                             nere_inserite += 1
             
@@ -217,7 +261,7 @@ class CruciverbaGeneratoreLeggero:
             for i in range(self.righe):
                 j = 0
                 while j < self.colonne:
-                    if self.griglia[i][j] not in ['#', '.']:
+                    if j < self.colonne and self.griglia[i][j] not in ['#', '.']:
                         inizio = j
                         parola = ""
                         while j < self.colonne and self.griglia[i][j] not in ['#', '.']:
@@ -232,7 +276,7 @@ class CruciverbaGeneratoreLeggero:
             for j in range(self.colonne):
                 i = 0
                 while i < self.righe:
-                    if self.griglia[i][j] not in ['#', '.']:
+                    if i < self.righe and self.griglia[i][j] not in ['#', '.']:
                         inizio = i
                         parola = ""
                         while i < self.righe and self.griglia[i][j] not in ['#', '.']:
@@ -243,10 +287,12 @@ class CruciverbaGeneratoreLeggero:
                     else:
                         i += 1
             
-            return len(self.parole_orizzontali) + len(self.parole_verticali) >= 4
+            # Controlla se abbiamo abbastanza parole
+            totale_parole = len(self.parole_orizzontali) + len(self.parole_verticali)
+            return totale_parole >= 2  # Almeno 2 parole totali
             
         except Exception as e:
-            st.error(f"Errore: {e}")
+            st.error(f"Errore dettagliato: {e}")
             return False
 
 # ==================== FUNZIONI PER ESPORTAZIONE ====================
@@ -256,20 +302,20 @@ def genera_txt(generatore, includi_lettere=True):
     
     if includi_lettere:
         output.write("CRUCIVERBA COMPILATO\n")
-        output.write("="*30 + "\n\n")
+        output.write("="*20 + "\n\n")
         for riga in generatore.griglia:
             riga_str = ""
             for cella in riga:
                 if cella == '#':
                     riga_str += "█ "
                 elif cella == '.':
-                    riga_str += ". "
+                    riga_str += "· "
                 else:
                     riga_str += f"{cella} "
             output.write(riga_str + "\n")
     else:
         output.write("SCHEMA VUOTO\n")
-        output.write("="*30 + "\n\n")
+        output.write("="*20 + "\n\n")
         for riga in generatore.griglia:
             riga_str = ""
             for cella in riga:
@@ -281,7 +327,7 @@ def genera_txt(generatore, includi_lettere=True):
     
     # Definizioni
     output.write("\n\nDEFINIZIONI\n")
-    output.write("="*30 + "\n\n")
+    output.write("="*20 + "\n\n")
     
     if generatore.parole_orizzontali:
         output.write("ORIZZONTALI:\n")
@@ -300,8 +346,7 @@ def main():
     st.set_page_config(
         page_title="Cruciverba Italiano",
         page_icon="🧩",
-        layout="centered",  # Migliore per iPad
-        initial_sidebar_state="collapsed"  # Sidebar chiusa all'inizio
+        layout="centered"
     )
     
     # Stile touch-friendly
@@ -311,10 +356,16 @@ def main():
             font-size: 20px !important;
             padding: 15px !important;
             width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
         }
         .stNumberInput input {
             font-size: 18px !important;
             padding: 10px !important;
+        }
+        .st-emotion-cache-1kyxreq {
+            font-size: 18px;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -329,19 +380,19 @@ def main():
     
     # Header
     st.title("🧩 Cruciverba Italiani")
-    st.caption("Parole dalla Treccani via API")
+    st.caption("Parole dalla Treccani")
     
-    # Input in colonne per iPad
+    # Input in colonne
     col1, col2 = st.columns(2)
     with col1:
-        righe = st.number_input("Righe", min_value=4, max_value=8, value=5, step=1)
+        righe = st.number_input("Righe", min_value=4, max_value=7, value=5, step=1)
     with col2:
-        colonne = st.number_input("Colonne", min_value=4, max_value=8, value=5, step=1)
+        colonne = st.number_input("Colonne", min_value=4, max_value=7, value=5, step=1)
     
-    # Pulsante grande per iPad
+    # Pulsante grande
     if st.button("🎲 GENERA CRUCIVERBA", use_container_width=True):
         with st.spinner("Creazione in corso..."):
-            st.session_state.generatore = CruciverbaGeneratoreLeggero(righe, colonne, st.session_state.dizionario)
+            st.session_state.generatore = CruciverbaGeneratoreRobusto(righe, colonne, st.session_state.dizionario)
             if st.session_state.generatore.genera():
                 st.success("✅ Cruciverba pronto!")
             else:
@@ -351,7 +402,7 @@ def main():
     if st.session_state.generatore:
         st.markdown("---")
         
-        # Due tab per le visualizzazioni
+        # Due tab
         tab1, tab2 = st.tabs(["📋 Compilato", "🔢 Vuoto"])
         
         with tab1:
@@ -365,13 +416,15 @@ def main():
         # Statistiche
         totale_parole = len(st.session_state.generatore.parole_orizzontali) + len(st.session_state.generatore.parole_verticali)
         celle_nere = sum(1 for riga in st.session_state.generatore.griglia for cella in riga if cella == '#')
+        celle_piene = sum(1 for riga in st.session_state.generatore.griglia for cella in riga if cella not in ['#', '.'])
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Parole", totale_parole)
         col2.metric("Orizzontali", len(st.session_state.generatore.parole_orizzontali))
         col3.metric("Verticali", len(st.session_state.generatore.parole_verticali))
+        col4.metric("Caselle nere", celle_nere)
         
-        # Definizioni (con API)
+        # Definizioni
         st.markdown("---")
         st.subheader("📚 Definizioni")
         
@@ -382,14 +435,14 @@ def main():
                     for i, (parola, r, c) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
                         definizione = st.session_state.dizionario.get_definizione(parola)
                         st.write(f"**{i}.** {parola}: {definizione}")
-                        time.sleep(0.5)  # Pausa per non sovraccaricare API
+                        time.sleep(0.3)
                 
                 if st.session_state.generatore.parole_verticali:
                     st.write("**Verticali:**")
                     for i, (parola, r, c) in enumerate(st.session_state.generatore.parole_verticali, len(st.session_state.generatore.parole_orizzontali)+1):
                         definizione = st.session_state.dizionario.get_definizione(parola)
                         st.write(f"**{i}.** {parola}: {definizione}")
-                        time.sleep(0.5)
+                        time.sleep(0.3)
         
         # Esportazione
         st.markdown("---")
