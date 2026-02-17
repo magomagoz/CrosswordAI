@@ -582,4 +582,120 @@ class CruciverbaApp:
                 # Mostra la griglia
                 griglia_string = self.generatore.stampa_griglia()
                 self.griglia_text.insert(tk.END, "GRIGLIA COMPILATA:\n")
-                self.griglia_text.insert(tk.
+                                self.griglia_text.insert(tk.END, griglia_string)
+                
+                # Mostra anche la versione con numeri
+                griglia_numeri, posizioni = self.generatore.griglia_con_numeri()
+                self.griglia_text.insert(tk.END, "\n" + "="*40 + "\n")
+                self.griglia_text.insert(tk.END, "SCHEMA VUOTO CON NUMERI:\n")
+                self.griglia_text.insert(tk.END, griglia_numeri)
+                
+                # Statistiche
+                tutte_parole = self.generatore._trova_parole_orizzontali() + self.generatore._trova_parole_verticali()
+                celle_piene = sum(1 for riga in self.generatore.griglia for cella in riga if cella != '.')
+                totale_celle = righe * colonne
+                percentuale = (celle_piene / totale_celle) * 100
+                
+                stats = f"\n📊 STATISTICHE:\n"
+                stats += f"Parole totali: {len(tutte_parole)}\n"
+                stats += f"Orizzontali: {len(self.generatore._trova_parole_orizzontali())}\n"
+                stats += f"Verticali: {len(self.generatore._trova_parole_verticali())}\n"
+                stats += f"Celle piene: {celle_piene}/{totale_celle} ({percentuale:.1f}%)\n"
+                
+                self.griglia_text.insert(tk.END, stats)
+                self.stats_label.config(text=f"Parole: {len(tutte_parole)} | Celle: {celle_piene}/{totale_celle}")
+                
+                # Mostra definizioni
+                self.def_text.insert(tk.END, "DEFINIZIONI:\n\n")
+                
+                self.def_text.insert(tk.END, "ORIZZONTALI:\n")
+                for parola, r, c, orient in self.generatore._trova_parole_orizzontali():
+                    definizione = self.dizionario.get_definizione(parola.lower())
+                    self.def_text.insert(tk.END, f"  • {parola}: {definizione}\n")
+                
+                self.def_text.insert(tk.END, "\nVERTICALI:\n")
+                for parola, r, c, orient in self.generatore._trova_parole_verticali():
+                    definizione = self.dizionario.get_definizione(parola.lower())
+                    self.def_text.insert(tk.END, f"  • {parola}: {definizione}\n")
+                
+                # Abilita pulsanti esportazione
+                self.export_compiled_button.config(state=tk.NORMAL)
+                self.export_empty_button.config(state=tk.NORMAL)
+                self.status_label.config(text="✅ Cruciverba generato con successo!", fg='#27ae60')
+            else:
+                self.griglia_text.insert(tk.END, "❌ Impossibile generare il cruciverba. Riprova con dimensioni diverse.")
+                self.status_label.config(text="❌ Generazione fallita", fg='#e74c3c')
+                
+        except Exception as e:
+            messagebox.showerror("Errore", f"Si è verificato un errore:\n{str(e)}")
+            self.status_label.config(text=f"❌ Errore: {str(e)[:50]}...", fg='#e74c3c')
+    
+    def esporta_pdf_compilato(self):
+        """Esporta il cruciverba compilato in PDF"""
+        if not self.generatore:
+            messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
+            return
+        
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf"), ("Tutti i file", "*.*")],
+            initialfile=f"cruciverba_compilato_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            title="Salva PDF compilato"
+        )
+        
+        if filename:
+            try:
+                esporta_pdf_compilato(self.generatore, filename, "Cruciverba Compilato")
+                messagebox.showinfo("Successo", f"Cruciverba compilato esportato con successo in:\n{filename}")
+                self.status_label.config(text=f"✅ PDF compilato salvato", fg='#27ae60')
+            except Exception as e:
+                messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
+    
+    def esporta_pdf_schema_vuoto(self):
+        """Esporta solo lo schema vuoto con caselle nere in PDF"""
+        if not self.generatore:
+            messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
+            return
+        
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf"), ("Tutti i file", "*.*")],
+            initialfile=f"cruciverba_schema_vuoto_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            title="Salva schema vuoto"
+        )
+        
+        if filename:
+            try:
+                esporta_pdf_schema_vuoto(self.generatore, filename, "Schema Cruciverba")
+                messagebox.showinfo("Successo", f"Schema cruciverba esportato con successo in:\n{filename}")
+                self.status_label.config(text=f"✅ PDF schema vuoto salvato", fg='#27ae60')
+            except Exception as e:
+                messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
+
+# ==================== AVVIO APPLICAZIONE ====================
+if __name__ == "__main__":
+    # Crea la finestra principale
+    root = tk.Tk()
+    
+    # Imposta icona (opzionale - decommenta se hai un file icona.ico)
+    # try:
+    #     root.iconbitmap(default='icona.ico')
+    # except:
+    #     pass
+    
+    # Imposta dimensione minima
+    root.minsize(700, 600)
+    
+    # Crea e avvia l'applicazione
+    app = CruciverbaApp(root)
+    
+    # Centra la finestra sullo schermo
+    root.update_idletasks()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    x = (root.winfo_screenwidth() // 2) - (width // 2)
+    y = (root.winfo_screenheight() // 2) - (height // 2)
+    root.geometry(f'{width}x{height}+{x}+{y}')
+    
+    # Avvia il loop principale
+    root.mainloop()
