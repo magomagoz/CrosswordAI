@@ -674,4 +674,78 @@ def main():
                     if orizzontale and verticale:
                         incroci += 1
         
-        col1, col2, col3, col4
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1.metric("Parole Totali", len(tutte_parole))
+        col2.metric("Orizzontali", len(st.session_state.generatore.parole_orizzontali))
+        col3.metric("Verticali", len(st.session_state.generatore.parole_verticali))
+        col4.metric("Incroci", incroci)
+        col5.metric("Celle Piene", f"{celle_piene} ({percentuale_piene:.1f}%)")
+        col6.metric("Caselle Nere", f"{celle_nere} ({percentuale_nere:.1f}%)")
+        
+        # Definizioni
+        st.markdown("---")
+        st.subheader("📚 Definizioni")
+        
+        if st.session_state.generatore.parole_orizzontali or st.session_state.generatore.parole_verticali:
+            tab1, tab2 = st.tabs(["Orizzontali", "Verticali"])
+            
+            with tab1:
+                if st.session_state.generatore.parole_orizzontali:
+                    for i, (parola, r, c) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
+                        definizione = st.session_state.dizionario.get_definizione(parola.lower())
+                        st.markdown(f"**{i}. {parola}** - {definizione}")
+                else:
+                    st.info("Nessuna parola orizzontale")
+            
+            with tab2:
+                if st.session_state.generatore.parole_verticali:
+                    for i, (parola, r, c) in enumerate(st.session_state.generatore.parole_verticali, len(st.session_state.generatore.parole_orizzontali)+1):
+                        definizione = st.session_state.dizionario.get_definizione(parola.lower())
+                        st.markdown(f"**{i}. {parola}** - {definizione}")
+                else:
+                    st.info("Nessuna parola verticale")
+        else:
+            st.info("Nessuna parola trovata")
+        
+        # Mostra la posizione delle parole (debug visivo)
+        with st.expander("📍 Posizioni delle parole"):
+            if st.session_state.generatore.parole_orizzontali:
+                st.write("**Orizzontali:**")
+                for parola, r, c in st.session_state.generatore.parole_orizzontali:
+                    st.write(f"  • {parola}: riga {r}, colonna {c} (lunghezza {len(parola)})")
+            
+            if st.session_state.generatore.parole_verticali:
+                st.write("**Verticali:**")
+                for parola, r, c in st.session_state.generatore.parole_verticali:
+                    st.write(f"  • {parola}: riga {r}, colonna {c} (lunghezza {len(parola)})")
+    
+    else:
+        st.info("👈 Imposta le dimensioni e clicca su 'GENERA NUOVO CRUCIVERBA' per iniziare!")
+        
+        # Esempio di anteprima
+        st.markdown("---")
+        st.subheader("🎯 Come funziona")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            **Algoritmo incrementale:**
+            1. Parte da una **parola orizzontale** centrale
+            2. Aggiunge **parole verticali** che la incrociano
+            3. Aggiunge altre **parole orizzontali** che incrociano le verticali
+            4. Le celle vuote diventano **caselle nere**
+            """)
+        
+        with col2:
+            st.markdown("""
+            **Caratteristiche:**
+            - Parole verificate nel dizionario italiano
+            - Incroci reali tra orizzontali e verticali
+            - Caselle nere solo dove necessario (15-35%)
+            - Definizioni automatiche
+            - Esportazione in formato TXT
+            """)
+
+if __name__ == "__main__":
+    main()
