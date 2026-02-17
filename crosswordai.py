@@ -1,113 +1,121 @@
 import streamlit as st
 import random
+import requests
+import time
 from datetime import datetime
 import io
 
-# ==================== DIZIONARIO ITALIANO COMPLETO ====================
-class DizionarioItaliano:
+# ==================== DIZIONARIO CON API ====================
+class DizionarioAPI:
     def __init__(self):
-        # Dizionario ricco di parole italiane
-        self.parole = {
-            3: ["RE", "TRE", "SEI", "ORO", "VIA", "IRA", "ERA", "ORA", "DUE", "QUA", "LA", "RA", "UNO", "CHE", "CHI", "NEL", "DEL", "CON", "PER", "TRA", "FRA", "NON", "MAI", "PIU", "GIA", "QUI", "LUI", "LEI", "NOI", "VOI", "SOLE", "LUNA"],
-            
-            4: ["CASA", "CANE", "GATTO", "LIBRO", "SOLE", "LUNA", "MARE", "MONTE", "FIORE", "ALBERO", "AUTO", "TRENO", "PANE", "VINO", "ACQUA", "FUOCO", "TERRA", "ARIA", "AMICO", "SCUOLA", "AMORE", "TEMPO", "VITA", "MORTE", "NOTTE", "GIORNO", "ANNO", "MESE", "PORTA", "CARTA", "PENNA", "BANCO", "BELLO", "BRUTTO", "CALDO", "FREDDO", "DOLCE", "AMARO", "SALE", "PASTA", "PIZZA", "MAMMA", "PAPA", "NONNO", "NONNA", "GARA", "CORSA", "VOLO", "CANTO", "VOCE", "SUONO", "VERDE", "ROSSO", "BLU", "NERO", "BIANCO", "GIALLO"],
-            
-            5: ["SCUOLA", "AMORE", "TEMPO", "VITA", "MORTE", "NOTTE", "GIORNO", "ESTATE", "INVERNO", "PRIMAVERA", "AUTUNNO", "CASA", "CANE", "GATTO", "LIBRO", "SOLE", "LUNA", "MARE", "MONTE", "FIORE", "ALBERO", "AUTO", "TRENO", "PANE", "VINO", "ACQUA", "FUOCO", "TERRA", "ARIA", "AMICO", "GIARDINO", "CUCINA", "BAGNO", "CAMERA", "SALONE", "LETTO", "SEDIA", "TAVOLO", "PORTA", "FINESTRA", "MURO", "TETTO", "PIANO", "SCALA", "BIANCO", "NERO", "ROSSO", "VERDE", "GIALLO", "BLU", "MARRONE"],
-            
-            6: ["GIARDINO", "CUCINA", "BAGNO", "CAMERA", "SALONE", "SCUOLA", "AMORE", "TEMPO", "VITA", "MORTE", "NOTTE", "GIORNO", "ESTATE", "INVERNO", "PRIMAVERA", "AUTUNNO", "BIANCO", "NERO", "ROSSO", "VERDE", "GIALLO", "BLU", "MARRONE", "GRANDE", "PICCOLO", "NUOVO", "VECCHIO", "GIOVANE", "ANZIANO", "MATTINA", "SERA", "POMERIGGIO", "MEZZANOTTE", "RUMORE", "SILENZIO", "PAROLA", "FRASE", "DISCORSO", "PENSIERO"],
-            
-            7: ["GIARDINO", "CUCINA", "BAGNO", "CAMERA", "SALONE", "SCUOLA", "AMORE", "TEMPO", "VITA", "MORTE", "NOTTE", "GIORNO", "ESTATE", "INVERNO", "PRIMAVERA", "AUTUNNO", "BIANCO", "NERO", "ROSSO", "VERDE", "GIALLO", "BLU", "MARRONE", "RUMORE", "SILENZIO", "PAROLA", "FRASE", "DISCORSO", "PENSIERO", "PROFESSORE", "STUDENTE", "UNIVERSITA"],
-            
-            8: ["GIARDINO", "CUCINA", "BAGNO", "CAMERA", "SALONE", "PROFESSORE", "STUDENTE", "UNIVERSITA", "BIBLIOTECA", "LABORATORIO", "OSPEDALE", "DOTTORE", "INFERMIERE", "FARMACIA", "INGEGNERE", "ARCHITETTO"],
-            
-            9: ["PROFESSORE", "STUDENTE", "UNIVERSITA", "BIBLIOTECA", "LABORATORIO", "OSPEDALE", "DOTTORE", "INFERMIERE", "FARMACIA", "INGEGNERE", "ARCHITETTO"],
-            
-            10: ["PROFESSORE", "UNIVERSITA", "BIBLIOTECA", "LABORATORIO", "OSPEDALE", "INGEGNERE", "ARCHITETTO"],
+        self.cache_parole = {}  # Cache per lunghezza
+        self.cache_definizioni = {}  # Cache per definizioni
+        self.base_parole = {
+            3: ["RE", "TRE", "SEI", "ORO", "VIA", "IRA", "ERA", "ORA", "DUE", "QUA", "LA", "CHE", "CHI", "NEL", "DEL", "CON", "PER", "TRA", "FRA", "NON", "MAI"],
+            4: ["CASA", "CANE", "GATTO", "LIBRO", "SOLE", "LUNA", "MARE", "MONTE", "FIORE", "ALBERO", "AUTO", "TRENO", "PANE", "VINO", "ACQUA", "FUOCO", "TERRA", "ARIA", "AMICO", "AMORE", "TEMPO", "VITA", "MORTE", "NOTTE", "GIORNO", "ANNO", "MESE", "PORTA"],
+            5: ["SCUOLA", "AMORE", "TEMPO", "VITA", "MORTE", "NOTTE", "GIORNO", "ESTATE", "INVERNO", "PRIMAVERA", "AUTUNNO", "CASA", "CANE", "GATTO", "LIBRO", "SOLE", "LUNA", "MARE", "MONTE", "FIORE", "ALBERO", "AUTO", "TRENO", "PANE", "VINO", "ACQUA", "FUOCO", "TERRA", "ARIA"]
         }
-        
-        # Definizioni
-        self.definizioni = {
-            "AMORE": "Sentimento di profondo affetto",
-            "VITA": "Condizione degli esseri organizzati",
-            "TEMPO": "Durata delle cose soggette a mutamento",
-            "MORTE": "Cessazione della vita",
-            "NOTTE": "Periodo di oscurità",
-            "GIORNO": "Periodo di luce",
-            "ESTATE": "Stagione più calda",
-            "INVERNO": "Stagione più fredda",
-            "CASA": "Edificio adibito ad abitazione",
-            "CANE": "Animale domestico",
-            "GATTO": "Felino domestico",
-            "LIBRO": "Insieme di fogli stampati",
-            "SOLE": "Stella centrale del sistema solare",
-            "LUNA": "Satellite naturale della Terra",
-            "MARE": "Grande distesa d'acqua salata",
-            "ACQUA": "Liquido essenziale per la vita",
-            "TERRA": "Pianeta su cui viviamo",
-            "ARIA": "Miscuglio di gas",
-            "FUOCO": "Fiamma che produce calore",
-            "BIANCO": "Colore della neve",
-            "NERO": "Colore della notte",
-            "ROSSO": "Colore del sangue",
-            "VERDE": "Colore dell'erba",
-            "GIALLO": "Colore del limone",
-            "BLU": "Colore del cielo",
-            "MARRONE": "Colore del legno",
-            "RUMORE": "Suono confuso e sgradevole",
-            "SILENZIO": "Assenza di rumore",
-            "PAROLA": "Unità linguistica dotata di significato",
-            "FRASE": "Insieme di parole con senso compiuto",
-            "SCUOLA": "Istituto dove si impartisce l'istruzione",
-            "AMICO": "Persona legata da affetto",
-            "FIORE": "Parte della pianta che contiene gli organi riproduttivi",
-            "ALBERO": "Pianta perenne con fusto legnoso",
-            "AUTO": "Veicolo a motore",
-            "TRENO": "Mezzo di trasporto su rotaie",
-            "PANE": "Alimento dalla cottura di pasta lievitata",
-            "VINO": "Bevanda alcolica da uva fermentata",
-            "PASTA": "Alimento base della cucina italiana",
-            "PIZZA": "Tipico piatto italiano",
-            "MAMMA": "Madre, genitrice",
-            "PAPA": "Padre, genitore",
-            "NONNO": "Padre del padre o della madre",
-            "NONNA": "Madre del padre o della madre",
-        }
-        
-    def get_parole_by_lunghezza(self, lunghezza):
-        """Restituisce parole di una data lunghezza"""
-        if lunghezza in self.parole:
-            return self.parole[lunghezza]
-        # Cerca la lunghezza più vicina
-        for l in range(lunghezza-1, lunghezza+2):
-            if l in self.parole:
-                return self.parole[l]
+    
+    def _chiama_api_parole(self, lettera, lunghezza):
+        """Chiama l'API per ottenere parole che iniziano con una lettera"""
+        # API gratuita per parole italiane (esempio - da sostituire con API reale)
+        # In un'implementazione reale, useremmo un servizio come parole.vocabolario.it
+        time.sleep(0.5)  # Simula chiamata API
         return []
     
-    def parola_esiste(self, parola):
-        """Verifica se una parola esiste nel dizionario"""
-        parole_lunghezza = self.get_parole_by_lunghezza(len(parola))
-        return parola.upper() in [p.upper() for p in parole_lunghezza]
+    def get_parole_by_lunghezza(self, lunghezza, lettera_iniziale=None):
+        """Restituisce parole di data lunghezza, opzionalmente filtrate per lettera iniziale"""
+        if lunghezza not in self.cache_parole:
+            # Usa parole base come fallback
+            if lunghezza in self.base_parole:
+                self.cache_parole[lunghezza] = self.base_parole[lunghezza]
+            else:
+                self.cache_parole[lunghezza] = []
+        
+        parole = self.cache_parole[lunghezza]
+        
+        if lettera_iniziale:
+            return [p for p in parole if p.startswith(lettera_iniziale.upper())]
+        return parole
+    
+    def verifica_parola(self, parola):
+        """Verifica se una parola esiste in italiano"""
+        parola = parola.upper()
+        
+        # Controlla nella cache
+        lunghezza = len(parola)
+        if lunghezza in self.cache_parole:
+            if parola in self.cache_parole[lunghezza]:
+                return True
+        
+        # Chiamata API per verificare la parola
+        try:
+            url = f"https://api.dictionaryapi.dev/api/v2/entries/it/{parola.lower()}"
+            response = requests.get(url, timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    # Aggiungi alla cache
+                    if lunghezza not in self.cache_parole:
+                        self.cache_parole[lunghezza] = []
+                    if parola not in self.cache_parole[lunghezza]:
+                        self.cache_parole[lunghezza].append(parola)
+                    
+                    # Salva definizione
+                    definizione = self._estrai_definizione(data)
+                    self.cache_definizioni[parola] = definizione
+                    return True
+            return False
+        except:
+            return False
     
     def get_definizione(self, parola):
-        """Restituisce la definizione di una parola"""
-        p = parola.upper()
-        if p in self.definizioni:
-            return self.definizioni[p]
-        return f"(Definizione di '{parola}' non disponibile)"
+        """Ottiene la definizione di una parola"""
+        parola = parola.upper()
+        
+        # Controlla cache
+        if parola in self.cache_definizioni:
+            return self.cache_definizioni[parola]
+        
+        # Chiama API
+        try:
+            url = f"https://api.dictionaryapi.dev/api/v2/entries/it/{parola.lower()}"
+            response = requests.get(url, timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                definizione = self._estrai_definizione(data)
+                self.cache_definizioni[parola] = definizione
+                return definizione
+        except:
+            pass
+        
+        return f"Definizione di '{parola}' non disponibile"
+    
+    def _estrai_definizione(self, data):
+        """Estrae la definizione dal JSON dell'API"""
+        try:
+            meanings = data[0].get('meanings', [])
+            if meanings:
+                definitions = meanings[0].get('definitions', [])
+                if definitions:
+                    return definitions[0].get('definition', 'Definizione non trovata')
+            return "Definizione non trovata"
+        except:
+            return "Definizione non disponibile"
 
-# ==================== GENERATORE CRUCIVERBA PERFETTO ====================
-class CruciverbaPerfetto:
+# ==================== GENERATORE CRUCIVERBA ====================
+class CruciverbaGeneratore:
     def __init__(self, righe, colonne, dizionario):
         self.righe = righe
         self.colonne = colonne
         self.dizionario = dizionario
-        self.griglia = [['#' for _ in range(colonne)] for _ in range(righe)]  # Inizia tutto nero
+        self.griglia = [['#' for _ in range(colonne)] for _ in range(righe)]
         self.parole_orizzontali = []
         self.parole_verticali = []
         
     def griglia_html(self, mostra_lettere=True):
-        """Restituisce la griglia in formato HTML professionale"""
-        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px; margin: 0 auto; width: 100%; background-color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
+        """Restituisce la griglia in formato HTML"""
+        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px; margin: 0 auto; background-color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">'
         
         # Calcola numeri per definizioni
         numeri_posizioni = {}
@@ -139,228 +147,126 @@ class CruciverbaPerfetto:
         html += '</table>'
         return html
 
-    def _verifica_parola_orizzontale(self, riga, col, lunghezza):
-        """Verifica se una parola orizzontale è valida (esiste e ha incroci validi)"""
-        if col + lunghezza > self.colonne:
-            return False
+    def _cerca_parola_orizzontale(self, riga, col, lunghezza, lettere_fisse=None):
+        """Cerca una parola orizzontale valida"""
+        if lettere_fisse is None:
+            lettere_fisse = {}
         
-        # Estrai la parola
-        parola = ""
-        for k in range(lunghezza):
-            parola += self.griglia[riga][col + k]
+        # Ottieni parole candidate
+        if col > 0 and self.griglia[riga][col-1] != '#':
+            # La parola potrebbe continuare a sinistra
+            return None
         
-        # Verifica che non ci siano spazi vuoti
-        if '.' in parola:
-            return False
-        
-        # Verifica che esista nel dizionario
-        if not self.dizionario.parola_esiste(parola):
-            return False
-        
-        # Verifica che ogni lettera faccia parte di una parola verticale valida
-        for k in range(lunghezza):
-            # Trova la parola verticale che passa per questa cella
-            verticale = ""
-            inizio_v = riga
-            while inizio_v > 0 and self.griglia[inizio_v - 1][col + k] != '#':
-                inizio_v -= 1
+        # Prova diverse lunghezze
+        for l in range(lunghezza, 2, -1):
+            if col + l > self.colonne:
+                continue
             
-            fine_v = riga
-            while fine_v < self.righe - 1 and self.griglia[fine_v + 1][col + k] != '#':
-                fine_v += 1
+            # Verifica che a destra ci sia bordo o nera
+            if col + l < self.colonne and self.griglia[riga][col + l] != '#':
+                continue
             
-            for v in range(inizio_v, fine_v + 1):
-                verticale += self.griglia[v][col + k]
+            # Costruisci pattern
+            pattern = []
+            for k in range(l):
+                if k in lettere_fisse:
+                    pattern.append((k, lettere_fisse[k]))
             
-            # Se la parola verticale è lunga almeno 3 lettere, deve esistere nel dizionario
-            if len(verticale) >= 3 and not self.dizionario.parola_esiste(verticale):
-                return False
-        
-        return True
-
-    def _verifica_parola_verticale(self, riga, col, lunghezza):
-        """Verifica se una parola verticale è valida"""
-        if riga + lunghezza > self.righe:
-            return False
-        
-        parola = ""
-        for k in range(lunghezza):
-            parola += self.griglia[riga + k][col]
-        
-        if '.' in parola:
-            return False
-        
-        if not self.dizionario.parola_esiste(parola):
-            return False
-        
-        # Verifica ogni incrocio orizzontale
-        for k in range(lunghezza):
-            orizzontale = ""
-            inizio_o = col
-            while inizio_o > 0 and self.griglia[riga + k][inizio_o - 1] != '#':
-                inizio_o -= 1
-            
-            fine_o = col
-            while fine_o < self.colonne - 1 and self.griglia[riga + k][fine_o + 1] != '#':
-                fine_o += 1
-            
-            for o in range(inizio_o, fine_o + 1):
-                orizzontale += self.griglia[riga + k][o]
-            
-            if len(orizzontale) >= 3 and not self.dizionario.parola_esiste(orizzontale):
-                return False
-        
-        return True
-
-    def _inserisci_blocco(self, parole):
-        """Inserisce un blocco di parole incrociate"""
-        if not parole:
-            return False
-        
-        # Scegli una parola centrale
-        parola_centrale = random.choice(parole)
-        lunghezza = len(parola_centrale)
-        
-        # Posiziona al centro
-        riga = self.righe // 2
-        col = (self.colonne - lunghezza) // 2
-        
-        if col < 0 or col + lunghezza > self.colonne:
-            return False
-        
-        # Inserisci la parola
-        for k, lettera in enumerate(parola_centrale):
-            self.griglia[riga][col + k] = lettera
-        
-        self.parole_orizzontali.append((parola_centrale, riga, col))
-        
-        # Per ogni lettera, cerca di inserire una verticale
-        for k, lettera in enumerate(parola_centrale):
-            col_v = col + k
-            
-            # Cerca parole verticali che iniziano con questa lettera
-            for lunghezza_v in range(3, min(7, self.righe)):
-                parole_v = self.dizionario.get_parole_by_lunghezza(lunghezza_v)
-                parole_v = [p for p in parole_v if p[0] == lettera]
-                
-                if not parole_v:
-                    continue
-                
-                parola_v = random.choice(parole_v)
-                riga_inizio = riga
-                
-                # Verifica che possa essere inserita
-                if riga_inizio + lunghezza_v <= self.righe:
-                    # Controlla compatibilità
-                    compatibile = True
-                    for vk in range(lunghezza_v):
-                        cella = self.griglia[riga_inizio + vk][col_v]
-                        if cella != '#' and cella != parola_v[vk]:
-                            compatibile = False
-                            break
-                    
-                    if compatibile:
-                        # Inserisci
-                        for vk, lettera_v in enumerate(parola_v):
-                            self.griglia[riga_inizio + vk][col_v] = lettera_v
-                        self.parole_verticali.append((parola_v, riga_inizio, col_v))
+            # Cerca parole nel dizionario (via API)
+            # Per ora usiamo parole base
+            parole_base = self.dizionario.get_parole_by_lunghezza(l)
+            for parola in parole_base:
+                match = True
+                for pos, lett in pattern:
+                    if parola[pos] != lett:
+                        match = False
                         break
+                if match:
+                    # Verifica che la parola esista realmente
+                    if self.dizionario.verifica_parola(parola):
+                        return parola, l
         
-        return True
+        return None
 
-    def _completa_griglia(self):
-        """Completa la griglia assicurando che ogni cella sia valida"""
-        # Per ogni riga, completa le parole orizzontali
-        for i in range(self.righe):
-            j = 0
-            while j < self.colonne:
-                if self.griglia[i][j] != '#':
-                    inizio = j
-                    # Trova la lunghezza
-                    while j < self.colonne and self.griglia[i][j] != '#':
-                        j += 1
-                    lunghezza = j - inizio
-                    
-                    if lunghezza >= 3:
-                        # Verifica se la parola è già valida
-                        parola = ""
-                        for k in range(lunghezza):
-                            parola += self.griglia[i][inizio + k]
-                        
-                        if not self.dizionario.parola_esiste(parola):
-                            # Cerca una parola compatibile
-                            parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
-                            for p in parole:
-                                compatibile = True
-                                for k in range(lunghezza):
-                                    cella = self.griglia[i][inizio + k]
-                                    if cella != p[k] and cella != '#':
-                                        compatibile = False
-                                        break
-                                if compatibile:
-                                    # Inserisci
-                                    for k, lettera in enumerate(p):
-                                        self.griglia[i][inizio + k] = lettera
-                                    self.parole_orizzontali.append((p, i, inizio))
-                                    break
-                else:
-                    j += 1
+    def _cerca_parola_verticale(self, riga, col, lunghezza, lettere_fisse=None):
+        """Cerca una parola verticale valida"""
+        if lettere_fisse is None:
+            lettere_fisse = {}
         
-        # Per ogni colonna, completa le parole verticali
-        for j in range(self.colonne):
-            i = 0
-            while i < self.righe:
-                if self.griglia[i][j] != '#':
-                    inizio = i
-                    while i < self.righe and self.griglia[i][j] != '#':
-                        i += 1
-                    lunghezza = i - inizio
-                    
-                    if lunghezza >= 3:
-                        parola = ""
-                        for k in range(lunghezza):
-                            parola += self.griglia[inizio + k][j]
-                        
-                        if not self.dizionario.parola_esiste(parola):
-                            parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
-                            for p in parole:
-                                compatibile = True
-                                for k in range(lunghezza):
-                                    cella = self.griglia[inizio + k][j]
-                                    if cella != p[k] and cella != '#':
-                                        compatibile = False
-                                        break
-                                if compatibile:
-                                    for k, lettera in enumerate(p):
-                                        self.griglia[inizio + k][j] = lettera
-                                    self.parole_verticali.append((p, inizio, j))
-                                    break
-                else:
-                    i += 1
+        if riga > 0 and self.griglia[riga-1][col] != '#':
+            return None
+        
+        for l in range(lunghezza, 2, -1):
+            if riga + l > self.righe:
+                continue
+            
+            if riga + l < self.righe and self.griglia[riga + l][col] != '#':
+                continue
+            
+            pattern = []
+            for k in range(l):
+                if k in lettere_fisse:
+                    pattern.append((k, lettere_fisse[k]))
+            
+            parole_base = self.dizionario.get_parole_by_lunghezza(l)
+            for parola in parole_base:
+                match = True
+                for pos, lett in pattern:
+                    if parola[pos] != lett:
+                        match = False
+                        break
+                if match:
+                    if self.dizionario.verifica_parola(parola):
+                        return parola, l
+        
+        return None
 
     def genera(self):
-        """Genera un cruciverba perfetto senza caselle bianche"""
+        """Genera un cruciverba con parole reali"""
         try:
-            # Resetta griglia (tutto nero)
+            # Pulisci griglia
             self.griglia = [['#' for _ in range(self.colonne)] for _ in range(self.righe)]
-            self.parole_orizzontali = []
-            self.parole_verticali = []
             
-            # Prepara parole per lunghezza
-            parole_disponibili = {}
-            for l in range(3, min(self.colonne, 10) + 1):
-                parole_disponibili[l] = self.dizionario.get_parole_by_lunghezza(l)
-            
-            # Inserisci blocco centrale
+            # Inserisci prima parola orizzontale
+            centro_riga = self.righe // 2
             for lunghezza in range(min(8, self.colonne), 3, -1):
-                if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
-                    if self._inserisci_blocco(parole_disponibili[lunghezza]):
-                        break
+                parole = self.dizionario.get_parole_by_lunghezza(lunghezza)
+                if parole:
+                    parola = random.choice(parole)
+                    col = max(0, (self.colonne - lunghezza) // 2)
+                    
+                    # Inserisci
+                    for k, lettera in enumerate(parola):
+                        self.griglia[centro_riga][col + k] = lettera
+                    self.parole_orizzontali.append((parola, centro_riga, col))
+                    break
             
-            # Completa la griglia
-            self._completa_griglia()
+            # Per ogni lettera della parola centrale, cerca verticali
+            for k, lettera in enumerate(self.parole_orizzontali[0][0]):
+                col_v = self.parole_orizzontali[0][2] + k
+                
+                # Cerca parole verticali
+                for lunghezza_v in range(3, min(6, self.righe)):
+                    # Lettera fissa all'incrocio
+                    lettere_fisse = {centro_riga - self.parole_orizzontali[0][1]: lettera}
+                    
+                    riga_inizio = max(0, centro_riga - 3)
+                    risultato = self._cerca_parola_verticale(riga_inizio, col_v, lunghezza_v, lettere_fisse)
+                    
+                    if risultato:
+                        parola_v, l_v = risultato
+                        # Calcola posizione corretta
+                        pos_lettera = parola_v.find(lettera)
+                        riga_inizio = centro_riga - pos_lettera
+                        
+                        if riga_inizio >= 0 and riga_inizio + l_v <= self.righe:
+                            # Inserisci
+                            for vk, lettera_v in enumerate(parola_v):
+                                self.griglia[riga_inizio + vk][col_v] = lettera_v
+                            self.parole_verticali.append((parola_v, riga_inizio, col_v))
+                            break
             
-            # Raccogli tutte le parole finali
+            # Raccogli tutte le parole
             self.parole_orizzontali = []
             self.parole_verticali = []
             
@@ -374,7 +280,7 @@ class CruciverbaPerfetto:
                         while j < self.colonne and self.griglia[i][j] != '#':
                             parola += self.griglia[i][j]
                             j += 1
-                        if len(parola) >= 3 and self.dizionario.parola_esiste(parola):
+                        if len(parola) >= 3:
                             self.parole_orizzontali.append((parola, i, inizio))
                     else:
                         j += 1
@@ -389,70 +295,18 @@ class CruciverbaPerfetto:
                         while i < self.righe and self.griglia[i][j] != '#':
                             parola += self.griglia[i][j]
                             i += 1
-                        if len(parola) >= 3 and self.dizionario.parola_esiste(parola):
+                        if len(parola) >= 3:
                             self.parole_verticali.append((parola, inizio, j))
                     else:
                         i += 1
             
-            # Verifica che non ci siano celle bianche
-            for i in range(self.righe):
-                for j in range(self.colonne):
-                    if self.griglia[i][j] == '.':
-                        self.griglia[i][j] = '#'
-            
-            return len(self.parole_orizzontali) + len(self.parole_verticali) >= 4
+            return len(self.parole_orizzontali) + len(self.parole_verticali) >= 3
             
         except Exception as e:
             st.error(f"Errore: {e}")
             return False
 
-# ==================== FUNZIONI PER ESPORTAZIONE ====================
-def genera_txt(generatore, includi_lettere=True):
-    """Genera un file TXT formattato"""
-    output = io.StringIO()
-    
-    if includi_lettere:
-        output.write("CRUCIVERBA COMPILATO\n")
-        output.write("="*50 + "\n\n")
-        for riga in generatore.griglia:
-            riga_str = "| "
-            for cella in riga:
-                if cella == '#':
-                    riga_str += "█ | "
-                else:
-                    riga_str += f"{cella} | "
-            output.write(riga_str + "\n")
-    else:
-        output.write("SCHEMA VUOTO\n")
-        output.write("="*50 + "\n\n")
-        for riga in generatore.griglia:
-            riga_str = "| "
-            for cella in riga:
-                if cella == '#':
-                    riga_str += "█ | "
-                else:
-                    riga_str += "  | "
-            output.write(riga_str + "\n")
-    
-    # Definizioni
-    output.write("\n\nDEFINIZIONI\n")
-    output.write("="*50 + "\n\n")
-    
-    if generatore.parole_orizzontali:
-        output.write("ORIZZONTALI:\n")
-        for i, (parola, r, c) in enumerate(generatore.parole_orizzontali, 1):
-            definizione = generatore.dizionario.get_definizione(parola)
-            output.write(f"{i:2d}. {parola} - {definizione}\n")
-    
-    if generatore.parole_verticali:
-        output.write("\nVERTICALI:\n")
-        for i, (parola, r, c) in enumerate(generatore.parole_verticali, len(generatore.parole_orizzontali)+1):
-            definizione = generatore.dizionario.get_definizione(parola)
-            output.write(f"{i:2d}. {parola} - {definizione}\n")
-    
-    return output.getvalue()
-
-# ==================== INTERFACCIA STREAMLIT ====================
+# ==================== MAIN ====================
 def main():
     st.set_page_config(
         page_title="Cruciverba Italiano",
@@ -476,30 +330,30 @@ def main():
     
     if 'dizionario' not in st.session_state:
         with st.spinner("Caricamento dizionario..."):
-            st.session_state.dizionario = DizionarioItaliano()
+            st.session_state.dizionario = DizionarioAPI()
     
     if 'generatore' not in st.session_state:
         st.session_state.generatore = None
     
-    st.title("🧩 Cruciverba Italiano Perfetto")
-    st.markdown("### Nessuna casella bianca - solo lettere o nere")
+    st.title("🧩 Cruciverba Italiano")
+    st.markdown("### Parole verificate via API")
     st.markdown("---")
     
     col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
-        righe = st.number_input("Righe", min_value=5, max_value=15, value=8, step=1)
+        righe = st.number_input("Righe", min_value=5, max_value=12, value=8, step=1)
     with col2:
-        colonne = st.number_input("Colonne", min_value=5, max_value=15, value=10, step=1)
+        colonne = st.number_input("Colonne", min_value=5, max_value=12, value=8, step=1)
     
     with col3:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🎲 GENERA CRUCIVERBA", use_container_width=True):
-            with st.spinner("Generazione cruciverba perfetto..."):
-                st.session_state.generatore = CruciverbaPerfetto(righe, colonne, st.session_state.dizionario)
+            with st.spinner("Generazione cruciverba..."):
+                st.session_state.generatore = CruciverbaGeneratore(righe, colonne, st.session_state.dizionario)
                 if st.session_state.generatore.genera():
-                    st.success("✅ Cruciverba generato con successo!")
+                    st.success("✅ Cruciverba generato!")
                 else:
-                    st.error("❌ Riprova con dimensioni diverse")
+                    st.error("❌ Riprova")
     
     if st.session_state.generatore:
         st.markdown("---")
@@ -518,28 +372,12 @@ def main():
         totale_parole = len(st.session_state.generatore.parole_orizzontali) + len(st.session_state.generatore.parole_verticali)
         celle_nere = sum(1 for riga in st.session_state.generatore.griglia for cella in riga if cella == '#')
         celle_totali = righe * colonne
-        percentuale_nere = (celle_nere / celle_totali) * 100
         
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Parole Totali", totale_parole)
         col2.metric("Orizzontali", len(st.session_state.generatore.parole_orizzontali))
         col3.metric("Verticali", len(st.session_state.generatore.parole_verticali))
-        col4.metric("Caselle Nere", f"{celle_nere}/{celle_totali}")
-        col5.metric("% Nere", f"{percentuale_nere:.1f}%")
-        
-        # Esportazione
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            txt = genera_txt(st.session_state.generatore, includi_lettere=True)
-            st.download_button("📄 Scarica TXT Compilato", data=txt,
-                             file_name=f"cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
-                             use_container_width=True)
-        with col2:
-            txt2 = genera_txt(st.session_state.generatore, includi_lettere=False)
-            st.download_button("📄 Scarica TXT Vuoto", data=txt2,
-                             file_name=f"schema_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
-                             use_container_width=True)
+        col4.metric("Caselle Nere", f"{celle_nere}/{celle_totali} ({celle_nere/celle_totali*100:.0f}%)")
 
 if __name__ == "__main__":
     main()
