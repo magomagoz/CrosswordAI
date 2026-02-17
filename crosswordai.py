@@ -35,55 +35,54 @@ class DizionarioItaliano:
         
         if count == 0:
             parole_con_definizioni = [
-                ("casa", "Edificio adibito ad abitazione"),
-                ("cane", "Animale domestico a quattro zampe"),
-                ("gatto", "Felino domestico"),
-                ("libro", "Insieme di fogli stampati rilegati"),
-                ("sole", "Stella centrale del sistema solare"),
-                ("luna", "Satellite naturale della Terra"),
-                ("mare", "Grande distesa d'acqua salata"),
-                ("monte", "Rilievo naturale elevato"),
-                ("fiore", "Parte della pianta che contiene gli organi riproduttivi"),
-                ("albero", "Pianta perenne con fusto legnoso"),
-                ("auto", "Veicolo a motore per il trasporto"),
-                ("treno", "Mezzo di trasporto su rotaie"),
-                ("pane", "Alimento ottenuto dalla cottura di pasta lievitata"),
-                ("vino", "Bevanda alcolica ottenuta da uva fermentata"),
-                ("acqua", "Liquido trasparente, incolore e inodore"),
-                ("fuoco", "Fiamma che produce calore e luce"),
-                ("terra", "Pianeta su cui viviamo"),
-                ("aria", "Miscuglio di gas che costituisce l'atmosfera"),
-                ("amico", "Persona con cui si ha un legame affettivo"),
-                ("scuola", "Istituto dove si impartisce l'istruzione"),
-                ("amore", "Sentimento di profondo affetto"),
-                ("tempo", "Durata delle cose soggette a mutamento"),
-                ("vita", "Condizione degli esseri organizzati"),
-                ("morte", "Cessazione della vita"),
-                ("notte", "Periodo di oscurità tra il tramonto e l'alba"),
-                ("giorno", "Periodo di luce tra l'alba e il tramonto"),
-                ("estate", "Stagione più calda dell'anno"),
-                ("inverno", "Stagione più fredda dell'anno"),
-                ("primavera", "Stagione che segue l'inverno"),
-                ("autunno", "Stagione che segue l'estate"),
-                ("ciao", "Saluto informale"),
-                ("grazie", "Espressione di ringraziamento"),
-                ("prego", "Formula di cortesia in risposta a grazie"),
-                ("per favore", "Espressione per chiedere gentilmente"),
-                ("buongiorno", "Saluto che si usa al mattino"),
-                ("buonasera", "Saluto che si usa alla sera"),
-                ("arrivederci", "Saluto formale di commiato"),
-                ("italia", "Stato dell'Europa meridionale"),
-                ("roma", "Capitale d'Italia"),
-                ("milano", "Città italiana, capoluogo della Lombardia"),
-                ("napoli", "Città italiana, capoluogo della Campania"),
-                ("torino", "Città italiana, capoluogo del Piemonte"),
-                ("firenze", "Città italiana, capoluogo della Toscana"),
-                ("venezia", "Città italiana costruita su palafitte"),
-                ("bologna", "Città italiana, capoluogo dell'Emilia-Romagna"),
-                ("genova", "Città italiana, capoluogo della Liguria"),
-                ("palermo", "Città italiana, capoluogo della Sicilia"),
-                ("bari", "Città italiana, capoluogo della Puglia"),
-                ("catania", "Città italiana sulla costa orientale della Sicilia"),
+                ("casa", "Edificio adibito ad abitazione familiare"),
+                ("cane", "Animale domestico a quattro zampe, fedele all'uomo"),
+                ("gatto", "Felino domestico, abile cacciatore di topi"),
+                ("libro", "Insieme di fogli stampati e rilegati formanti un volume"),
+                ("sole", "Stella centrale del sistema solare, fonte di luce e calore"),
+                ("luna", "Satellite naturale della Terra, visibile nel cielo notturno"),
+                ("mare", "Grande distesa d'acqua salata che ricopre gran parte della Terra"),
+                ("monte", "Rilievo naturale della superficie terrestre elevato oltre i 600-700 metri"),
+                ("fiore", "Parte della pianta che contiene gli organi della riproduzione"),
+                ("albero", "Pianta perenne con fusto legnoso e chioma di rami e foglie"),
+                ("auto", "Veicolo a motore per il trasporto su strada"),
+                ("treno", "Mezzo di trasporto su rotaie, composto da locomotive e vagoni"),
+                ("pane", "Alimento ottenuto dalla cottura di pasta lievitata di farina e acqua"),
+                ("vino", "Bevanda alcolica ottenuta dalla fermentazione dell'uva"),
+                ("acqua", "Liquido trasparente, incolore, inodore e insapore, essenziale per la vita"),
+                ("fuoco", "Fiamma che produce calore e luce, generata dalla combustione"),
+                ("terra", "Pianeta su cui viviamo, terzo in ordine di distanza dal Sole"),
+                ("aria", "Miscuglio di gas che costituisce l'atmosfera terrestre"),
+                ("amico", "Persona legata a un'altra da affetto reciproco e stima"),
+                ("scuola", "Istituto dove si impartisce l'istruzione e l'educazione"),
+                ("amore", "Sentimento di profondo affetto, attrazione e dedizione verso qualcuno"),
+                ("tempo", "Durata delle cose soggette a mutamento, successione di istanti"),
+                ("vita", "Condizione degli esseri organizzati, che nascono, crescono e si riproducono"),
+                ("morte", "Cessazione irreversibile delle funzioni vitali di un organismo"),
+                ("notte", "Periodo di oscurità compreso tra il tramonto e l'alba"),
+                ("giorno", "Periodo di luce compreso tra l'alba e il tramonto"),
+                ("estate", "Stagione più calda dell'anno, compresa tra la primavera e l'autunno"),
+                ("inverno", "Stagione più fredda dell'anno, compresa tra l'autunno e la primavera"),
+                ("primavera", "Stagione che segue l'inverno e precede l'estate"),
+                ("autunno", "Stagione che segue l'estate e precede l'inverno"),
+                ("ciao", "Saluto informale, usato sia per incontri che per congedi"),
+                ("grazie", "Espressione di ringraziamento e riconoscenza"),
+                ("prego", "Formula di cortesia in risposta a grazie o per invitare a fare qualcosa"),
+                ("buongiorno", "Saluto che si usa al mattino o nelle prime ore del pomeriggio"),
+                ("buonasera", "Saluto che si usa dalla sera fino a notte inoltrata"),
+                ("arrivederci", "Saluto formale di commiato, con l'aspettativa di rivedersi"),
+                ("italia", "Stato dell'Europa meridionale, con forma di stivale"),
+                ("roma", "Capitale d'Italia, città ricca di storia e monumenti antichi"),
+                ("milano", "Città italiana, capoluogo della Lombardia, centro finanziario e della moda"),
+                ("napoli", "Città italiana, capoluogo della Campania, famosa per il golfo e la pizza"),
+                ("torino", "Città italiana, capoluogo del Piemonte, prima capitale d'Italia"),
+                ("firenze", "Città italiana, capoluogo della Toscana, culla del Rinascimento"),
+                ("venezia", "Città italiana costruita su palafitte, famosa per i canali e il Carnevale"),
+                ("bologna", "Città italiana, capoluogo dell'Emilia-Romagna, sede dell'università più antica"),
+                ("genova", "Città italiana, capoluogo della Liguria, importante porto sul Mar Ligure"),
+                ("palermo", "Città italiana, capoluogo della Sicilia, ricca di arte e cultura"),
+                ("bari", "Città italiana, capoluogo della Puglia, centro economico del Mezzogiorno"),
+                ("catania", "Città italiana sulla costa orientale della Sicilia, ai piedi dell'Etna"),
             ]
             
             for parola, definizione in parole_con_definizioni:
@@ -102,7 +101,9 @@ class DizionarioItaliano:
                            "grande", "piccolo", "alto", "basso", "lungo", "corto", "veloce",
                            "lento", "bello", "brutto", "nuovo", "vecchio", "giovane", "anziano",
                            "mangiare", "bere", "dormire", "correre", "saltare", "leggere", "scrivere",
-                           "parlare", "ascoltare", "guardare", "sentire", "toccare", "odorare"]
+                           "parlare", "ascoltare", "guardare", "sentire", "toccare", "odorare",
+                           "felice", "triste", "arrabbiato", "calmo", "nervoso", "stanco", "energico",
+                           "oggi", "domani", "ieri", "settimana", "mese", "anno", "secolo"]
             
             for parola in altre_parole:
                 try:
@@ -169,19 +170,18 @@ class CruciverbaGenerator:
                         if (i, j) not in numeri_posizioni:
                             numeri_posizioni[(i, j)] = numero
                             numero += 1
-            
-            risultato += '\n'
         
         # Seconda passata per stampare con i numeri
         for i in range(self.righe):
+            riga_str = ""
             for j in range(self.colonne):
                 if (i, j) in numeri_posizioni:
-                    risultato += f"{numeri_posizioni[(i, j)]:2d}"
+                    riga_str += f"{numeri_posizioni[(i, j)]:2d} "
                 elif self.griglia[i][j] == '.':
-                    risultato += " ■"
+                    riga_str += " ■ "
                 else:
-                    risultato += f" {self.griglia[i][j]}"
-            risultato += '\n'
+                    riga_str += "   "
+            risultato += riga_str + '\n'
         
         return risultato, numeri_posizioni
 
@@ -334,7 +334,8 @@ def esporta_pdf_compilato(generatore, filename, titolo="Cruciverba Compilato"):
     
     griglia_str = generatore.stampa_griglia()
     for riga in griglia_str.split('\n'):
-        pdf.cell(0, 8, riga, 0, 1)
+        if riga.strip():
+            pdf.cell(0, 8, riga, 0, 1)
     
     # Parole inserite
     pdf.ln(10)
@@ -371,17 +372,10 @@ def esporta_pdf_schema_vuoto(generatore, filename, titolo="Schema Cruciverba"):
     # Ottieni griglia con numeri
     griglia_numeri, posizioni_numeri = generatore.griglia_con_numeri()
     
-    # Crea una griglia vuota con solo caselle nere e numeri
-    for i in range(generatore.righe):
-        riga_str = ""
-        for j in range(generatore.colonne):
-            if generatore.griglia[i][j] == '.':
-                riga_str += " ■ "
-            elif (i, j) in posizioni_numeri:
-                riga_str += f"{posizioni_numeri[(i, j)]:2d} "
-            else:
-                riga_str += "   "
-        pdf.cell(0, 8, riga_str, 0, 1)
+    # Stampa la griglia vuota
+    for riga in griglia_numeri.split('\n'):
+        if riga.strip():
+            pdf.cell(0, 8, riga, 0, 1)
     
     # Definizioni orizzontali e verticali
     pdf.ln(10)
@@ -393,13 +387,26 @@ def esporta_pdf_schema_vuoto(generatore, filename, titolo="Schema Cruciverba"):
     orizzontali = generatore._trova_parole_orizzontali()
     verticali = generatore._trova_parole_verticali()
     
+    # Dizionario per mappare posizioni a numeri
+    numero_posizione = {}
+    num = 1
+    for i in range(generatore.righe):
+        for j in range(generatore.colonne):
+            if generatore.griglia[i][j] != '.':
+                inizio_orizzontale = (j == 0 or generatore.griglia[i][j-1] == '.') and (j < generatore.colonne-1 and generatore.griglia[i][j+1] != '.')
+                inizio_verticale = (i == 0 or generatore.griglia[i-1][j] == '.') and (i < generatore.righe-1 and generatore.griglia[i+1][j] != '.')
+                if inizio_orizzontale or inizio_verticale:
+                    if (i, j) not in numero_posizione:
+                        numero_posizione[(i, j)] = num
+                        num += 1
+    
     if orizzontali:
         pdf.set_font('Arial', 'B', 11)
         pdf.cell(0, 8, "Orizzontali:", 0, 1)
         pdf.set_font('Arial', '', 10)
         for parola, r, c, orient in orizzontali:
-            if (r, c) in posizioni_numeri:
-                num = posizioni_numeri[(r, c)]
+            if (r, c) in numero_posizione:
+                num = numero_posizione[(r, c)]
                 definizione = generatore.dizionario.get_definizione(parola.lower())
                 pdf.cell(0, 6, f"{num}. {definizione}", 0, 1)
     
@@ -409,8 +416,8 @@ def esporta_pdf_schema_vuoto(generatore, filename, titolo="Schema Cruciverba"):
         pdf.cell(0, 8, "Verticali:", 0, 1)
         pdf.set_font('Arial', '', 10)
         for parola, r, c, orient in verticali:
-            if (r, c) in posizioni_numeri:
-                num = posizioni_numeri[(r, c)]
+            if (r, c) in numero_posizione:
+                num = numero_posizione[(r, c)]
                 definizione = generatore.dizionario.get_definizione(parola.lower())
                 pdf.cell(0, 6, f"{num}. {definizione}", 0, 1)
     
@@ -575,114 +582,4 @@ class CruciverbaApp:
                 # Mostra la griglia
                 griglia_string = self.generatore.stampa_griglia()
                 self.griglia_text.insert(tk.END, "GRIGLIA COMPILATA:\n")
-                self.griglia_text.insert(tk.END, griglia_string)
-                
-                # Mostra anche la versione con numeri
-                griglia_numeri, posizioni = self.generatore.griglia_con_numeri()
-                self.griglia_text.insert(tk.END, "\n" + "="*40 + "\n")
-                self.griglia_text.insert(tk.END, "SCHEMA VUOTO CON NUMERI:\n")
-                self.griglia_text.insert(tk.END, griglia_numeri)
-                
-                # Statistiche
-                tutte_parole = self.generatore._trova_parole_orizzontali() + self.generatore._trova_parole_verticali()
-                celle_piene = sum(1 for riga in self.generatore.griglia for cella in riga if cella != '.')
-                totale_celle = righe * colonne
-                percentuale = (celle_piene / totale_celle) * 100
-                
-                stats = f"\n📊 STATISTICHE:\n"
-                stats += f"Parole totali: {len(tutte_parole)}\n"
-                stats += f"Orizzontali: {len(self.generatore._trova_parole_orizzontali())}\n"
-                stats += f"Verticali: {len(self.generatore._trova_parole_verticali())}\n"
-                stats += f"Celle piene: {celle_piene}/{totale_celle} ({percentuale:.1f}%)\n"
-                
-                self.griglia_text.insert(tk.END, stats)
-                self.stats_label.config(text=f"Parole: {len(tutte_parole)} | Celle: {celle_piene}/{totale_celle}")
-                
-                # Mostra definizioni
-                self.def_text.insert(tk.END, "DEFINIZIONI:\n\n")
-                
-                self.def_text.insert(tk.END, "ORIZZONTALI:\n")
-                for parola, r, c, orient in self.generatore._trova_parole_orizzontali():
-                    definizione = self.dizionario.get_definizione(parola.lower())
-                    self.def_text.insert(tk.END, f"  • {parola}: {definizione}\n")
-                
-                self.def_text.insert(tk.END, "\nVERTICALI:\n")
-                for parola, r, c, orient in self.generatore._trova_parole_verticali():
-                    definizione = self.dizionario.get_definizione(parola.lower())
-                    self.def_text.insert(tk.END, f"  • {parola}: {definizione}\n")
-                
-                # Abilita pulsanti esportazione
-                self.export_compiled_button.config(state=tk.NORMAL)
-                self.export_empty_button.config(state=tk.NORMAL)
-                self.status_label.config(text="✅ Cruciverba generato con successo!", fg='#27ae60')
-            else:
-                self.griglia_text.insert(tk.END, "❌ Impossibile generare il cruciverba. Riprova con dimensioni diverse.")
-                self.status_label.config(text="❌ Generazione fallita", fg='#e74c3c')
-                
-        except Exception as e:
-            messagebox.showerror("Errore", f"Si è verificato un errore:\n{str(e)}")
-            self.status_label.config(text=f"❌ Errore: {str(e)[:50]}...", fg='#e74c3c')
-    
-    def esporta_pdf_compilato(self):
-        """Esporta il cruciverba compilato in PDF"""
-        if not self.generatore:
-            messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
-            return
-        
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")],
-            initialfile=f"cruciverba_compilato_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        )
-        
-        if filename:
-            try:
-                esporta_pdf_compilato(self.generatore, filename, "Cruciverba Compilato")
-                messagebox.showinfo("Successo", f"Cruciverba esportato in:\n{filename}")
-                self.status_label.config(text=f"✅ PDF compilato salvato", fg='#27ae60')
-            except Exception as e:
-                messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
-    def esporta_pdf_schema_vuoto(self):
-        """Esporta solo lo schema vuoto con caselle nere in PDF"""
-        if not self.generatore:
-            messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
-            return
-        
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf")],
-            initialfile=f"cruciverba_schema_vuoto_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        )
-        
-        if filename:
-            try:
-                esporta_pdf_schema_vuoto(self.generatore, filename, "Schema Cruciverba")
-                messagebox.showinfo("Successo", f"Schema cruciverba esportato in:\n{filename}")
-                self.status_label.config(text=f"✅ PDF schema vuoto salvato", fg='#27ae60')
-            except Exception as e:
-                messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
-
-# ==================== AVVIO APPLICAZIONE ====================
-if __name__ == "__main__":
-    # Crea la finestra principale
-    root = tk.Tk()
-    
-    # Imposta icona (opzionale)
-    try:
-        root.iconbitmap(default='icona.ico')
-    except:
-        pass  # Ignora se non trova l'icona
-    
-    # Crea e avvia l'applicazione
-    app = CruciverbaApp(root)
-    
-    # Centra la finestra sullo schermo
-    root.update_idletasks()
-    width = root.winfo_width()
-    height = root.winfo_height()
-    x = (root.winfo_screenwidth() // 2) - (width // 2)
-    y = (root.winfo_screenheight() // 2) - (height // 2)
-    root.geometry(f'{width}x{height}+{x}+{y}')
-    
-    # Avvia il loop principale
-    root.mainloop()
+                self.griglia_text.insert(tk.
