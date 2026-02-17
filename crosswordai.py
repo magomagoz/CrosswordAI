@@ -17,14 +17,10 @@ class DizionarioItaliano:
             "MONTE", "MARE", "FIUME", "LAGO", "ISOLE", "PONTE", "STRADA",
             "SQUOLA", "TEATRO", "CINEMA", "MUSICA", "DANZA", "CANTO",
             "COLORE", "DISEGNO", "PITTURA", "FOTO", "LIBRO", "RIVISTA",
-            "MEDICO", "DOTTORE", "INFERMIERE", "OSPEDALE", "FARMACIA",
-            "PROFUMO", "SAPORE", "ODORE", "RUMORE", "SILENZIO", "VOCE"
+            "MEDICO", "DOTTORE", "INFERMIERE", "OSPEDALE", "FARMACIA"
         ]
         
-        # Parole di 3 lettere (per completamento)
-        self.parole_3 = ["RE", "VIA", "IRA", "ERA", "ORA", "DUE", "TRE", "SEI", "UNO"]
-        
-        self.tutte_parole = set(self.parole_5 + self.parole_3)
+        self.tutte_parole = set(self.parole_5)
     
     def parola_esiste(self, parola):
         return parola.upper() in self.tutte_parole
@@ -35,7 +31,7 @@ class DizionarioItaliano:
             parole = [p for p in parole if p not in exclude]
         return parole
 
-# ==================== GENERATORE CON SCHEMA FISSO ====================
+# ==================== GENERATORE CON SCHEMA FISSO CORRETTO ====================
 class CruciverbaSchemaFisso:
     def __init__(self, dizionario):
         self.dizionario = dizionario
@@ -43,9 +39,12 @@ class CruciverbaSchemaFisso:
         self.parole_orizzontali = []
         self.parole_verticali = []
         
-        # Schema fisso: caselle nere in B2(0,1), B4(0,3), D2(2,1), D4(2,3)
-        # Coordinate (riga, colonna) con indici 0-4
-        self.caselle_nere = [(1,0), (3,0), (1,2), (3,2)]  # B2, B4, D2, D4
+        # Coordinate corrette per caselle nere (riga, colonna) con indici 0-4
+        # B2 = riga 1, colonna 1
+        # B4 = riga 1, colonna 3  
+        # D2 = riga 3, colonna 1
+        # D4 = riga 3, colonna 3
+        self.caselle_nere = [(1, 1), (1, 3), (3, 1), (3, 3)]
         
     def griglia_html(self, mostra_lettere=True):
         html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 20px; margin: 0 auto;">'
@@ -54,13 +53,13 @@ class CruciverbaSchemaFisso:
         numeri = {}
         if not mostra_lettere:
             # Orizzontali: righe 0,2,4
-            numeri[(0,0)] = 1
-            numeri[(2,0)] = 2
-            numeri[(4,0)] = 3
+            numeri[(0, 0)] = 1
+            numeri[(2, 0)] = 2
+            numeri[(4, 0)] = 3
             # Verticali: colonne 0,2,4
-            numeri[(0,0)] = 1  # Già presente
-            numeri[(0,2)] = 4
-            numeri[(0,4)] = 5
+            numeri[(0, 0)] = 1  # Già presente (stessa cella)
+            numeri[(0, 2)] = 4
+            numeri[(0, 4)] = 5
         
         for i in range(5):
             html += '<tr>'
@@ -79,70 +78,87 @@ class CruciverbaSchemaFisso:
 
     def genera(self):
         """Genera il cruciverba con schema fisso"""
-        # Parole orizzontali (righe 0, 2, 4)
-        orizzontali = [
-            self.dizionario.get_parole_5(),  # riga 0
-            self.dizionario.get_parole_5(),  # riga 2
-            self.dizionario.get_parole_5()   # riga 4
-        ]
-        
-        # Prova diverse combinazioni
-        for _ in range(100):  # 100 tentativi
-            # Scegli 3 parole orizzontali diverse
-            parole_scelte = []
-            for i in range(3):
-                if orizzontali[i]:
-                    parola = random.choice(orizzontali[i])
-                    orizzontali[i] = [p for p in orizzontali[i] if p != parola]
-                    parole_scelte.append(parola)
-                else:
-                    parole_scelte.append(None)
+        try:
+            # Parole orizzontali (righe 0, 2, 4)
+            orizzontali_disponibili = [
+                self.dizionario.get_parole_5(),  # riga 0
+                self.dizionario.get_parole_5(),  # riga 2
+                self.dizionario.get_parole_5()   # riga 4
+            ]
             
-            if None in parole_scelte:
-                continue
-            
-            # Posiziona orizzontali
-            self.griglia[0] = list(parole_scelte[0])  # riga 0
-            self.griglia[2] = list(parole_scelte[1])  # riga 2
-            self.griglia[4] = list(parole_scelte[2])  # riga 4
-            
-            # Inserisci caselle nere
-            for r, c in self.caselle_nere:
-                self.griglia[r][c] = '#'
-            
-            # Costruisci parole verticali
-            verticali = []
-            for col in [0, 2, 4]:  # colonne senza caselle nere
-                parola = ""
-                for riga in range(5):
-                    if (riga, col) not in self.caselle_nere:
-                        parola += self.griglia[riga][col]
+            # Prova diverse combinazioni
+            for _ in range(100):  # 100 tentativi
+                parole_scelte = []
+                usate = set()
                 
-                if len(parola) == 5:  # Deve essere 5 lettere
+                # Scegli 3 parole orizzontali diverse
+                for i in range(3):
+                    disponibili = [p for p in orizzontali_disponibili[i] if p not in usate]
+                    if not disponibili:
+                        break
+                    parola = random.choice(disponibili)
+                    parole_scelte.append(parola)
+                    usate.add(parola)
+                
+                if len(parole_scelte) != 3:
+                    continue
+                
+                # Inizializza griglia
+                self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
+                
+                # Posiziona orizzontali
+                for k, parola in enumerate(parole_scelte):
+                    riga = k * 2  # righe 0, 2, 4
+                    for col in range(5):
+                        self.griglia[riga][col] = parola[col]
+                
+                # Inserisci caselle nere
+                for r, c in self.caselle_nere:
+                    self.griglia[r][c] = '#'
+                
+                # Costruisci parole verticali
+                verticali = []
+                for col in [0, 2, 4]:  # colonne senza caselle nere
+                    parola = ""
+                    for riga in range(5):
+                        cella = self.griglia[riga][col]
+                        if cella != ' ' and cella != '#':
+                            parola += cella
+                    
+                    # Verifica che la parola abbia 5 lettere
+                    if len(parola) != 5:
+                        break
                     verticali.append(parola)
+                
+                if len(verticali) != 3:
+                    continue
+                
+                # Verifica che tutte le verticali siano parole valide
+                tutte_valide = True
+                for parola in verticali:
+                    if not self.dizionario.parola_esiste(parola):
+                        tutte_valide = False
+                        break
+                
+                if tutte_valide:
+                    # Registra le parole
+                    self.parole_orizzontali = [
+                        (parole_scelte[0], 0, 0),
+                        (parole_scelte[1], 2, 0),
+                        (parole_scelte[2], 4, 0)
+                    ]
+                    self.parole_verticali = [
+                        (verticali[0], 0, 0),
+                        (verticali[1], 0, 2),
+                        (verticali[2], 0, 4)
+                    ]
+                    return True
             
-            # Verifica che tutte le verticali siano parole valide
-            tutte_valide = True
-            for parola in verticali:
-                if not self.dizionario.parola_esiste(parola):
-                    tutte_valide = False
-                    break
+            return False
             
-            if tutte_valide:
-                # Registra le parole
-                self.parole_orizzontali = [
-                    (parole_scelte[0], 0, 0),
-                    (parole_scelte[1], 2, 0),
-                    (parole_scelte[2], 4, 0)
-                ]
-                self.parole_verticali = [
-                    (verticali[0], 0, 0),
-                    (verticali[1], 0, 2),
-                    (verticali[2], 0, 4)
-                ]
-                return True
-        
-        return False
+        except Exception as e:
+            st.error(f"Errore: {e}")
+            return False
 
 # ==================== FUNZIONI ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
@@ -210,7 +226,7 @@ def main():
     
     st.title("🧩 Cruciverba 5x5 Schema Fisso")
     st.markdown("### 4 caselle nere - 6 parole da 5 lettere")
-    st.markdown("Posizioni fisse: B2, B4, D2, D4")
+    st.markdown("Posizioni fisse: B2 (1,1), B4 (1,3), D2 (3,1), D4 (3,3)")
     
     if st.button("🎲 GENERA CRUCIVERBA", use_container_width=True):
         with st.spinner("Generazione cruciverba..."):
