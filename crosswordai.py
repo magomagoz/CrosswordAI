@@ -9,12 +9,10 @@ class DizionarioItaliano:
         # Parole italiane vere organizzate per lunghezza
         self.parole = {
             3: ["RE", "VIA", "IRA", "ERA", "ORA", "DUE", "TRE", "SEI", "UNO", "NON", "MAI", "PIU"],
-            4: ["CASA", "CANE", "GATTO", "LIBRO", "SOLE", "LUNA", "MARE", "MONTE", "FIORE", "ALBERO", 
-                "AUTO", "PANE", "VINO", "ACQUA", "FUOCO", "TERRA", "ARIA", "AMORE", "TEMPO", "VITA", 
-                "MORTE", "NOTTE", "GIORNO", "PORTA", "CARTA", "PENNA", "BANCO"],
-            5: ["MORTE", "TEMPO", "PRIMA", "DOPO", "SOLE", "LUNA", "FIORE", "ALBERO", "ACQUA", "TERRA",
-                "ARIA", "FUOCO", "AMORE", "VITA", "NOTTE", "GIORNO", "BIANCO", "NERO", "ROSSO", "VERDE",
-                "GIALLO", "GRANDE", "PICCOLO", "SCUOLA", "ESTATE", "INVERNO"]
+            4: ["CASA", "CANE", "SOLE", "LUNA", "MARE", "DOPO", "SOLE", "LUNA", 
+                "AUTO", "PANE", "VINO", "ARIA", "VITA"],
+            5: ["MORTE", "TEMPO", "PRIMA", "FIORE", "ACQUA", "TERRA",
+                "FUOCO", "AMORE", "NOTTE", "ROSSO", "VERDE",
         }
         
         # Per ricerca rapida
