@@ -1,10 +1,10 @@
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+import streamlit as st
 import sqlite3
 import random
-from fpdf import FPDF
-import os
 from datetime import datetime
+import pandas as pd
+import base64
+import io
 
 # ==================== DIZIONARIO ITALIANO ====================
 class DizionarioItaliano:
@@ -29,7 +29,6 @@ class DizionarioItaliano:
     
     def _popola_dizionario_demo(self):
         """Popola il database con parole italiane e definizioni per demo"""
-        # Conta quante parole ci sono già
         self.cursor.execute("SELECT COUNT(*) FROM parole")
         count = self.cursor.fetchone()[0]
         
@@ -78,11 +77,6 @@ class DizionarioItaliano:
                 ("torino", "Città italiana, capoluogo del Piemonte, prima capitale d'Italia"),
                 ("firenze", "Città italiana, capoluogo della Toscana, culla del Rinascimento"),
                 ("venezia", "Città italiana costruita su palafitte, famosa per i canali e il Carnevale"),
-                ("bologna", "Città italiana, capoluogo dell'Emilia-Romagna, sede dell'università più antica"),
-                ("genova", "Città italiana, capoluogo della Liguria, importante porto sul Mar Ligure"),
-                ("palermo", "Città italiana, capoluogo della Sicilia, ricca di arte e cultura"),
-                ("bari", "Città italiana, capoluogo della Puglia, centro economico del Mezzogiorno"),
-                ("catania", "Città italiana sulla costa orientale della Sicilia, ai piedi dell'Etna"),
             ]
             
             for parola, definizione in parole_con_definizioni:
@@ -94,16 +88,11 @@ class DizionarioItaliano:
                 except:
                     pass
             
-            # Aggiungi altre parole senza definizione (solo per completare)
             altre_parole = ["re", "mamma", "papà", "fratello", "sorella", "nonno", "nonna", 
                            "zio", "zia", "cugino", "cugina", "nipote", "marito", "moglie",
                            "rosso", "blu", "verde", "giallo", "bianco", "nero", "marrone",
                            "grande", "piccolo", "alto", "basso", "lungo", "corto", "veloce",
-                           "lento", "bello", "brutto", "nuovo", "vecchio", "giovane", "anziano",
-                           "mangiare", "bere", "dormire", "correre", "saltare", "leggere", "scrivere",
-                           "parlare", "ascoltare", "guardare", "sentire", "toccare", "odorare",
-                           "felice", "triste", "arrabbiato", "calmo", "nervoso", "stanco", "energico",
-                           "oggi", "domani", "ieri", "settimana", "mese", "anno", "secolo"]
+                           "lento", "bello", "brutto", "nuovo", "vecchio", "giovane", "anziano"]
             
             for parola in altre_parole:
                 try:
@@ -115,7 +104,6 @@ class DizionarioItaliano:
                     pass
             
             self.conn.commit()
-            print(f"Dizionario popolato con {len(parole_con_definizioni) + len(altre_parole)} parole")
 
     def get_parole_by_lunghezza(self, lunghezza):
         """Restituisce tutte le parole di una data lunghezza."""
@@ -143,27 +131,40 @@ class CruciverbaGenerator:
         self.colonne = colonne
         self.dizionario = dizionario
         self.griglia = [['.' for _ in range(colonne)] for _ in range(righe)]
-        self.parole_inserite = []  # Lista di tuple (parola, riga, colonna, orientamento)
-        self.definizioni = {}  # Dizionario con le definizioni
+        self.parole_inserite = []
+        self.definizioni = {}
         
     def stampa_griglia(self):
+        """Restituisce la griglia come stringa formattata"""
         risultato = ""
         for riga in self.griglia:
             risultato += ' '.join(riga) + '\n'
         return risultato
     
-    def griglia_con_numeri(self):
-        """Restituisce la griglia con i numeri per le definizioni"""
-        risultato = ""
-        numero = 1
+    def griglia_html(self):
+        """Restituisce la griglia in formato HTML per una visualizzazione migliore"""
+        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px;">'
+        for riga in self.griglia:
+            html += '<tr>'
+            for cella in riga:
+                if cella == '.':
+                    html += '<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: black;">&nbsp;</td>'
+                else:
+                    html += f'<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: white;">{cella}</td>'
+            html += '</tr>'
+        html += '</table>'
+        return html
+    
+    def griglia_vuota_html(self):
+        """Restituisce la griglia vuota con numeri in HTML"""
+        # Calcola i numeri per le definizioni
         numeri_posizioni = {}
+        numero = 1
         
         for i in range(self.righe):
             for j in range(self.colonne):
                 if self.griglia[i][j] != '.':
-                    # Controlla se è inizio di parola orizzontale
                     inizio_orizzontale = (j == 0 or self.griglia[i][j-1] == '.') and (j < self.colonne-1 and self.griglia[i][j+1] != '.')
-                    # Controlla se è inizio di parola verticale
                     inizio_verticale = (i == 0 or self.griglia[i-1][j] == '.') and (i < self.righe-1 and self.griglia[i+1][j] != '.')
                     
                     if inizio_orizzontale or inizio_verticale:
@@ -171,19 +172,21 @@ class CruciverbaGenerator:
                             numeri_posizioni[(i, j)] = numero
                             numero += 1
         
-        # Seconda passata per stampare con i numeri
+        # Crea HTML
+        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 16px;">'
         for i in range(self.righe):
-            riga_str = ""
+            html += '<tr>'
             for j in range(self.colonne):
-                if (i, j) in numeri_posizioni:
-                    riga_str += f"{numeri_posizioni[(i, j)]:2d} "
-                elif self.griglia[i][j] == '.':
-                    riga_str += " ■ "
+                if self.griglia[i][j] == '.':
+                    html += '<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: black;">&nbsp;</td>'
+                elif (i, j) in numeri_posizioni:
+                    html += f'<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: white; position: relative;"><span style="font-size: 10px; position: absolute; top: 2px; left: 2px;">{numeri_posizioni[(i, j)]}</span>&nbsp;</td>'
                 else:
-                    riga_str += "   "
-            risultato += riga_str + '\n'
+                    html += '<td style="border: 1px solid black; width: 30px; height: 30px; text-align: center; background-color: white;">&nbsp;</td>'
+            html += '</tr>'
+        html += '</table>'
         
-        return risultato, numeri_posizioni
+        return html, numeri_posizioni
 
     def _trova_parole_orizzontali(self):
         """Trova tutte le parole orizzontali nella griglia"""
@@ -197,7 +200,7 @@ class CruciverbaGenerator:
                         inizio = j
                     parola_corrente += self.griglia[i][j]
                 else:
-                    if len(parola_corrente) > 1:  # Parola di almeno 2 lettere
+                    if len(parola_corrente) > 1:
                         parole.append((parola_corrente, i, inizio, 'orizzontale'))
                     parola_corrente = ""
             if len(parola_corrente) > 1:
@@ -223,479 +226,214 @@ class CruciverbaGenerator:
                 parole.append((parola_corrente, inizio, j, 'verticale'))
         return parole
 
-    def genera(self, difficolta='media'):
+    def genera(self):
         """Genera un cruciverba con parole casuali"""
-        # Pulisci griglia
         self.griglia = [['.' for _ in range(self.colonne)] for _ in range(self.righe)]
         self.parole_inserite = []
         
-        # Lista di parole possibili per diverse lunghezze
         parole_disponibili = {}
         for lunghezza in range(2, max(self.righe, self.colonne) + 1):
             parole_disponibili[lunghezza] = self.dizionario.get_parole_by_lunghezza(lunghezza)
         
-        # Strategia: inserisci prima le parole più lunghe
-        parole_inserite = 0
-        tentativi = 0
-        max_tentativi = 1000
-        
-        # Inserisci alcune parole orizzontali
-        for i in range(0, self.righe, 2):  # Una riga sì e una no
-            if tentativi > max_tentativi:
-                break
-                
+        # Inserisci parole orizzontali
+        for i in range(0, self.righe, 2):
             lunghezza = random.randint(3, min(self.colonne, 8))
             if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
                 parola = random.choice(parole_disponibili[lunghezza]).upper()
-                # Cerca una posizione valida
                 for _ in range(10):
                     j = random.randint(0, self.colonne - lunghezza)
-                    # Controlla se la posizione è libera
                     libera = True
                     for k in range(lunghezza):
                         if self.griglia[i][j + k] != '.':
                             libera = False
                             break
                     if libera:
-                        # Inserisci la parola
                         for k, lettera in enumerate(parola):
                             self.griglia[i][j + k] = lettera
                         self.parole_inserite.append((parola, i, j, 'orizzontale'))
-                        parole_inserite += 1
                         break
-            tentativi += 1
         
-        # Inserisci alcune parole verticali
-        for j in range(1, self.colonne, 2):  # Una colonna sì e una no
-            if tentativi > max_tentativi:
-                break
-                
+        # Inserisci parole verticali
+        for j in range(1, self.colonne, 2):
             lunghezza = random.randint(3, min(self.righe, 8))
             if lunghezza in parole_disponibili and parole_disponibili[lunghezza]:
                 parola = random.choice(parole_disponibili[lunghezza]).upper()
-                # Cerca una posizione valida
                 for _ in range(10):
                     i = random.randint(0, self.righe - lunghezza)
-                    # Controlla se la posizione è libera
                     libera = True
-                    # Controlla anche che le lettere corrispondano se ci sono incroci
                     for k in range(lunghezza):
                         cella = self.griglia[i + k][j]
                         if cella != '.' and cella != parola[k]:
                             libera = False
                             break
-                        elif cella == '.':
-                            # OK, libera
-                            pass
                     if libera:
-                        # Inserisci la parola
                         for k, lettera in enumerate(parola):
                             self.griglia[i + k][j] = lettera
                         self.parole_inserite.append((parola, i, j, 'verticale'))
-                        parole_inserite += 1
                         break
-            tentativi += 1
         
-        # Raccogli tutte le parole finali e le loro definizioni
         tutte_parole = self._trova_parole_orizzontali() + self._trova_parole_verticali()
-        for parola, r, c, orient in tutte_parole:
-            self.definizioni[(r, c, orient)] = {
-                'parola': parola,
-                'definizione': self.dizionario.get_definizione(parola.lower())
-            }
-        
         return len(tutte_parole) > 0
 
-# ==================== GENERATORE PDF ====================
-class PDFCruciverba(FPDF):
-    def __init__(self, titolo="Cruciverba"):
-        super().__init__()
-        self.titolo = titolo
-        
-    def header(self):
-        self.set_font('Arial', 'B', 15)
-        self.cell(0, 10, self.titolo, 0, 1, 'C')
-        self.ln(10)
-        
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Pagina {self.page_no()}', 0, 0, 'C')
-
-def esporta_pdf_compilato(generatore, filename, titolo="Cruciverba Compilato"):
-    """Esporta il cruciverba compilato in PDF"""
-    pdf = PDFCruciverba(titolo)
-    pdf.add_page()
-    pdf.set_font('Courier', '', 12)
+# ==================== FUNZIONI PER ESPORTAZIONE ====================
+def genera_txt(generatore, includi_lettere=True):
+    """Genera un file TXT con il cruciverba"""
+    output = io.StringIO()
     
-    # Griglia compilata
-    pdf.cell(0, 10, "Griglia Compilata:", 0, 1)
-    pdf.ln(5)
+    if includi_lettere:
+        output.write("CRUCIVERBA COMPILATO\n")
+        output.write("="*40 + "\n\n")
+        output.write(generatore.stampa_griglia())
+    else:
+        output.write("SCHEMA CRUCIVERBA VUOTO\n")
+        output.write("="*40 + "\n\n")
+        griglia_vuota, _ = generatore.griglia_vuota_html()
+        # Converti HTML in testo semplice
+        output.write("(Visualizza la versione HTML per lo schema con numeri)\n\n")
     
-    griglia_str = generatore.stampa_griglia()
-    for riga in griglia_str.split('\n'):
-        if riga.strip():
-            pdf.cell(0, 8, riga, 0, 1)
+    # Aggiungi definizioni
+    output.write("\n\nDEFINIZIONI\n")
+    output.write("="*40 + "\n\n")
     
-    # Parole inserite
-    pdf.ln(10)
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(0, 10, "Parole Inserite:", 0, 1)
-    pdf.set_font('Arial', '', 10)
-    
-    for i, (parola, r, c, orient) in enumerate(generatore.parole_inserite, 1):
-        pdf.cell(0, 6, f"{i}. {parola} ({orient}, posizione: [{r},{c}])", 0, 1)
-    
-    # Definizioni
-    pdf.ln(5)
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(0, 10, "Definizioni:", 0, 1)
-    pdf.set_font('Arial', '', 10)
-    
-    # Raccogli tutte le parole con definizioni
-    tutte_parole = generatore._trova_parole_orizzontali() + generatore._trova_parole_verticali()
-    for parola, r, c, orient in tutte_parole:
-        definizione = generatore.dizionario.get_definizione(parola.lower())
-        pdf.multi_cell(0, 6, f"{parola} ({orient}): {definizione}")
-    
-    pdf.output(filename)
-
-def esporta_pdf_schema_vuoto(generatore, filename, titolo="Schema Cruciverba"):
-    """Esporta solo lo schema vuoto con caselle nere in PDF"""
-    pdf = PDFCruciverba(titolo)
-    pdf.add_page()
-    pdf.set_font('Courier', '', 14)
-    
-    pdf.cell(0, 10, "Schema Cruciverba:", 0, 1)
-    pdf.ln(5)
-    
-    # Ottieni griglia con numeri
-    griglia_numeri, posizioni_numeri = generatore.griglia_con_numeri()
-    
-    # Stampa la griglia vuota
-    for riga in griglia_numeri.split('\n'):
-        if riga.strip():
-            pdf.cell(0, 8, riga, 0, 1)
-    
-    # Definizioni orizzontali e verticali
-    pdf.ln(10)
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(0, 10, "Definizioni:", 0, 1)
-    pdf.set_font('Arial', '', 10)
-    
-    # Separa orizzontali e verticali
     orizzontali = generatore._trova_parole_orizzontali()
     verticali = generatore._trova_parole_verticali()
     
-    # Dizionario per mappare posizioni a numeri
-    numero_posizione = {}
-    num = 1
-    for i in range(generatore.righe):
-        for j in range(generatore.colonne):
-            if generatore.griglia[i][j] != '.':
-                inizio_orizzontale = (j == 0 or generatore.griglia[i][j-1] == '.') and (j < generatore.colonne-1 and generatore.griglia[i][j+1] != '.')
-                inizio_verticale = (i == 0 or generatore.griglia[i-1][j] == '.') and (i < generatore.righe-1 and generatore.griglia[i+1][j] != '.')
-                if inizio_orizzontale or inizio_verticale:
-                    if (i, j) not in numero_posizione:
-                        numero_posizione[(i, j)] = num
-                        num += 1
-    
     if orizzontali:
-        pdf.set_font('Arial', 'B', 11)
-        pdf.cell(0, 8, "Orizzontali:", 0, 1)
-        pdf.set_font('Arial', '', 10)
+        output.write("ORIZZONTALI:\n")
         for parola, r, c, orient in orizzontali:
-            if (r, c) in numero_posizione:
-                num = numero_posizione[(r, c)]
-                definizione = generatore.dizionario.get_definizione(parola.lower())
-                pdf.cell(0, 6, f"{num}. {definizione}", 0, 1)
+            definizione = generatore.dizionario.get_definizione(parola.lower())
+            output.write(f"  • {parola}: {definizione}\n")
     
     if verticali:
-        pdf.ln(5)
-        pdf.set_font('Arial', 'B', 11)
-        pdf.cell(0, 8, "Verticali:", 0, 1)
-        pdf.set_font('Arial', '', 10)
+        output.write("\nVERTICALI:\n")
         for parola, r, c, orient in verticali:
-            if (r, c) in numero_posizione:
-                num = numero_posizione[(r, c)]
-                definizione = generatore.dizionario.get_definizione(parola.lower())
-                pdf.cell(0, 6, f"{num}. {definizione}", 0, 1)
+            definizione = generatore.dizionario.get_definizione(parola.lower())
+            output.write(f"  • {parola}: {definizione}\n")
     
-    pdf.output(filename)
+    return output.getvalue()
 
-# ==================== INTERFACCIA GRAFICA ====================
-class CruciverbaApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Generatore di Cruciverba Italiani")
-        self.root.geometry("800x700")
-        self.root.resizable(True, True)
-        
-        # Variabili
-        self.righe_var = tk.IntVar(value=10)
-        self.colonne_var = tk.IntVar(value=10)
-        self.difficolta_var = tk.StringVar(value="media")
-        self.dizionario = DizionarioItaliano()
-        self.generatore = None
-        
-        # Colori e stili
-        self.root.configure(bg='#f0f0f0')
-        
-        # Crea l'interfaccia
-        self._crea_widgets()
-        
-    def _crea_widgets(self):
-        # Frame principale
-        main_frame = ttk.Frame(self.root, padding="15")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Titolo con stile
-        title_frame = ttk.Frame(main_frame)
-        title_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        title_label = tk.Label(title_frame, text="🧩 GENERATORE DI CRUCIVERBA ITALIANI", 
-                               font=('Arial', 18, 'bold'), bg='#f0f0f0', fg='#2c3e50')
-        title_label.pack()
-        
-        subtitle_label = tk.Label(title_frame, text="Parole dall'Accademia della Crusca e Treccani", 
-                                  font=('Arial', 10, 'italic'), bg='#f0f0f0', fg='#7f8c8d')
-        subtitle_label.pack()
-        
-        # Linea separatrice
-        separator = ttk.Separator(main_frame, orient='horizontal')
-        separator.pack(fill=tk.X, pady=10)
-        
-        # Frame per input
-        input_frame = ttk.LabelFrame(main_frame, text=" Dimensioni Cruciverba ", padding="15")
-        input_frame.pack(fill=tk.X, pady=10)
-        
-        # Griglia per input
-        input_grid = ttk.Frame(input_frame)
-        input_grid.pack()
-        
-        # Righe
-        ttk.Label(input_grid, text="Numero di righe:", font=('Arial', 11)).grid(row=0, column=0, padx=10, pady=8, sticky='w')
-        righe_spinbox = ttk.Spinbox(input_grid, from_=5, to=25, textvariable=self.righe_var, width=10, font=('Arial', 11))
-        righe_spinbox.grid(row=0, column=1, padx=10, pady=8)
-        
-        # Colonne
-        ttk.Label(input_grid, text="Numero di colonne:", font=('Arial', 11)).grid(row=1, column=0, padx=10, pady=8, sticky='w')
-        colonne_spinbox = ttk.Spinbox(input_grid, from_=5, to=25, textvariable=self.colonne_var, width=10, font=('Arial', 11))
-        colonne_spinbox.grid(row=1, column=1, padx=10, pady=8)
-        
-        # Difficoltà
-        ttk.Label(input_grid, text="Difficoltà:", font=('Arial', 11)).grid(row=2, column=0, padx=10, pady=8, sticky='w')
-        difficolta_combo = ttk.Combobox(input_grid, textvariable=self.difficolta_var, values=["facile", "media", "difficile"], 
-                                        width=10, state="readonly", font=('Arial', 11))
-        difficolta_combo.grid(row=2, column=1, padx=10, pady=8)
-        
-        # Frame pulsanti
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=15)
-        
-        # Pulsante Crea Cruciverba
-        self.create_button = tk.Button(button_frame, text="✏️ CREA NUOVO CRUCIVERBA", 
-                                       command=self.crea_cruciverba,
-                                       bg='#3498db', fg='white', font=('Arial', 12, 'bold'),
-                                       padx=20, pady=10, cursor='hand2', relief=tk.FLAT)
-        self.create_button.pack(side=tk.LEFT, padx=5)
-        
-        # Pulsante Esporta PDF Compilato
-        self.export_compiled_button = tk.Button(button_frame, text="📄 ESPORTA PDF COMPILATO", 
-                                                command=self.esporta_pdf_compilato,
-                                                bg='#27ae60', fg='white', font=('Arial', 11),
-                                                padx=15, pady=8, cursor='hand2', relief=tk.FLAT,
-                                                state=tk.DISABLED)
-        self.export_compiled_button.pack(side=tk.LEFT, padx=5)
-        
-        # Pulsante Esporta PDF Schema Vuoto
-        self.export_empty_button = tk.Button(button_frame, text="📄 ESPORTA PDF SCHEMA VUOTO", 
-                                             command=self.esporta_pdf_schema_vuoto,
-                                             bg='#e67e22', fg='white', font=('Arial', 11),
-                                             padx=15, pady=8, cursor='hand2', relief=tk.FLAT,
-                                             state=tk.DISABLED)
-        self.export_empty_button.pack(side=tk.LEFT, padx=5)
-        
-        # Area risultati
-        result_frame = ttk.LabelFrame(main_frame, text=" Cruciverba Generato ", padding="10")
-        result_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        
-        # Text widget con scrollbar
-        text_frame = ttk.Frame(result_frame)
-        text_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.griglia_text = tk.Text(text_frame, height=15, font=('Courier', 12), 
-                                     wrap=tk.NONE, bg='white', relief=tk.SUNKEN, borderwidth=2)
-        self.griglia_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        # Scrollbar verticale
-        v_scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=self.griglia_text.yview)
-        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.griglia_text.config(yscrollcommand=v_scrollbar.set)
-        
-        # Scrollbar orizzontale
-        h_scrollbar = ttk.Scrollbar(result_frame, orient=tk.HORIZONTAL, command=self.griglia_text.xview)
-        h_scrollbar.pack(fill=tk.X)
-        self.griglia_text.config(xscrollcommand=h_scrollbar.set)
-        
-        # Frame definizioni
-        def_frame = ttk.LabelFrame(main_frame, text=" Definizioni ", padding="10")
-        def_frame.pack(fill=tk.X, pady=10)
-        
-        self.def_text = tk.Text(def_frame, height=8, font=('Arial', 10), wrap=tk.WORD)
-        self.def_text.pack(fill=tk.BOTH, expand=True)
-        
-        # Status bar
-        status_frame = ttk.Frame(main_frame)
-        status_frame.pack(fill=tk.X, pady=(5,0))
-        
-        self.status_label = tk.Label(status_frame, text="✅ Pronto - Database connesso", 
-                                      font=('Arial', 9), bg='#f0f0f0', fg='#27ae60', anchor='w')
-        self.status_label.pack(side=tk.LEFT)
-        
-        # Stats label
-        self.stats_label = tk.Label(status_frame, text="", font=('Arial', 9), bg='#f0f0f0', fg='#7f8c8d', anchor='e')
-        self.stats_label.pack(side=tk.RIGHT)
-        
-    def crea_cruciverba(self):
-        """Crea un nuovo cruciverba"""
-        righe = self.righe_var.get()
-        colonne = self.colonne_var.get()
-        difficolta = self.difficolta_var.get()
-        
-        # Pulisci le aree di testo
-        self.griglia_text.delete(1.0, tk.END)
-        self.def_text.delete(1.0, tk.END)
-        
-        # Mostra messaggio
-        self.griglia_text.insert(tk.END, f"Generazione cruciverba {righe}x{colonne} (difficoltà: {difficolta})...\n\n")
-        self.root.update()
-        
-        try:
-            # Crea generatore
-            self.generatore = CruciverbaGenerator(righe, colonne, self.dizionario)
-            
-            # Genera cruciverba
-            successo = self.generatore.genera(difficolta)
-            
-            if successo:
-                # Mostra la griglia
-                griglia_string = self.generatore.stampa_griglia()
-                self.griglia_text.insert(tk.END, "GRIGLIA COMPILATA:\n")
-                                self.griglia_text.insert(tk.END, griglia_string)
-                
-                # Mostra anche la versione con numeri
-                griglia_numeri, posizioni = self.generatore.griglia_con_numeri()
-                self.griglia_text.insert(tk.END, "\n" + "="*40 + "\n")
-                self.griglia_text.insert(tk.END, "SCHEMA VUOTO CON NUMERI:\n")
-                self.griglia_text.insert(tk.END, griglia_numeri)
-                
-                # Statistiche
-                tutte_parole = self.generatore._trova_parole_orizzontali() + self.generatore._trova_parole_verticali()
-                celle_piene = sum(1 for riga in self.generatore.griglia for cella in riga if cella != '.')
-                totale_celle = righe * colonne
-                percentuale = (celle_piene / totale_celle) * 100
-                
-                stats = f"\n📊 STATISTICHE:\n"
-                stats += f"Parole totali: {len(tutte_parole)}\n"
-                stats += f"Orizzontali: {len(self.generatore._trova_parole_orizzontali())}\n"
-                stats += f"Verticali: {len(self.generatore._trova_parole_verticali())}\n"
-                stats += f"Celle piene: {celle_piene}/{totale_celle} ({percentuale:.1f}%)\n"
-                
-                self.griglia_text.insert(tk.END, stats)
-                self.stats_label.config(text=f"Parole: {len(tutte_parole)} | Celle: {celle_piene}/{totale_celle}")
-                
-                # Mostra definizioni
-                self.def_text.insert(tk.END, "DEFINIZIONI:\n\n")
-                
-                self.def_text.insert(tk.END, "ORIZZONTALI:\n")
-                for parola, r, c, orient in self.generatore._trova_parole_orizzontali():
-                    definizione = self.dizionario.get_definizione(parola.lower())
-                    self.def_text.insert(tk.END, f"  • {parola}: {definizione}\n")
-                
-                self.def_text.insert(tk.END, "\nVERTICALI:\n")
-                for parola, r, c, orient in self.generatore._trova_parole_verticali():
-                    definizione = self.dizionario.get_definizione(parola.lower())
-                    self.def_text.insert(tk.END, f"  • {parola}: {definizione}\n")
-                
-                # Abilita pulsanti esportazione
-                self.export_compiled_button.config(state=tk.NORMAL)
-                self.export_empty_button.config(state=tk.NORMAL)
-                self.status_label.config(text="✅ Cruciverba generato con successo!", fg='#27ae60')
-            else:
-                self.griglia_text.insert(tk.END, "❌ Impossibile generare il cruciverba. Riprova con dimensioni diverse.")
-                self.status_label.config(text="❌ Generazione fallita", fg='#e74c3c')
-                
-        except Exception as e:
-            messagebox.showerror("Errore", f"Si è verificato un errore:\n{str(e)}")
-            self.status_label.config(text=f"❌ Errore: {str(e)[:50]}...", fg='#e74c3c')
+# ==================== INTERFACCIA STREAMLIT ====================
+def main():
+    st.set_page_config(
+        page_title="Generatore di Cruciverba Italiani",
+        page_icon="🧩",
+        layout="wide"
+    )
     
-    def esporta_pdf_compilato(self):
-        """Esporta il cruciverba compilato in PDF"""
-        if not self.generatore:
-            messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
-            return
-        
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf"), ("Tutti i file", "*.*")],
-            initialfile=f"cruciverba_compilato_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-            title="Salva PDF compilato"
-        )
-        
-        if filename:
-            try:
-                esporta_pdf_compilato(self.generatore, filename, "Cruciverba Compilato")
-                messagebox.showinfo("Successo", f"Cruciverba compilato esportato con successo in:\n{filename}")
-                self.status_label.config(text=f"✅ PDF compilato salvato", fg='#27ae60')
-            except Exception as e:
-                messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
+    # Inizializza il dizionario nella sessione
+    if 'dizionario' not in st.session_state:
+        st.session_state.dizionario = DizionarioItaliano()
     
-    def esporta_pdf_schema_vuoto(self):
-        """Esporta solo lo schema vuoto con caselle nere in PDF"""
-        if not self.generatore:
-            messagebox.showwarning("Attenzione", "Genera prima un cruciverba!")
-            return
+    if 'generatore' not in st.session_state:
+        st.session_state.generatore = None
+    
+    # Header
+    st.title("🧩 Generatore di Cruciverba Italiani")
+    st.markdown("### Parole dall'Accademia della Crusca e Treccani")
+    st.markdown("---")
+    
+    # Sidebar per i controlli
+    with st.sidebar:
+        st.header("⚙️ Impostazioni")
         
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF files", "*.pdf"), ("Tutti i file", "*.*")],
-            initialfile=f"cruciverba_schema_vuoto_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-            title="Salva schema vuoto"
-        )
+        righe = st.number_input("Numero di righe", min_value=5, max_value=20, value=10, step=1)
+        colonne = st.number_input("Numero di colonne", min_value=5, max_value=20, value=10, step=1)
         
-        if filename:
-            try:
-                esporta_pdf_schema_vuoto(self.generatore, filename, "Schema Cruciverba")
-                messagebox.showinfo("Successo", f"Schema cruciverba esportato con successo in:\n{filename}")
-                self.status_label.config(text=f"✅ PDF schema vuoto salvato", fg='#27ae60')
-            except Exception as e:
-                messagebox.showerror("Errore", f"Errore durante l'esportazione:\n{str(e)}")
+        st.markdown("---")
+        
+        if st.button("🎲 GENERA NUOVO CRUCIVERBA", use_container_width=True):
+            with st.spinner("Generazione in corso..."):
+                st.session_state.generatore = CruciverbaGenerator(righe, colonne, st.session_state.dizionario)
+                successo = st.session_state.generatore.genera()
+                if successo:
+                    st.success("Cruciverba generato con successo!")
+                else:
+                    st.error("Impossibile generare il cruciverba. Riprova.")
+        
+        st.markdown("---")
+        
+        if st.session_state.generatore:
+            st.header("📥 Esportazione")
+            
+            # Export compilato
+            txt_compilato = genera_txt(st.session_state.generatore, includi_lettere=True)
+            st.download_button(
+                label="📄 Scarica TXT Compilato",
+                data=txt_compilato,
+                file_name=f"cruciverba_compilato_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+            
+            # Export schema vuoto
+            txt_vuoto = genera_txt(st.session_state.generatore, includi_lettere=False)
+            st.download_button(
+                label="📄 Scarica TXT Schema Vuoto",
+                data=txt_vuoto,
+                file_name=f"cruciverba_vuoto_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+    
+    # Area principale
+    if st.session_state.generatore:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("📋 Cruciverba Compilato")
+            st.markdown("Griglia con le lettere:")
+            st.markdown(st.session_state.generatore.griglia_html(), unsafe_allow_html=True)
+        
+        with col2:
+            st.subheader("🔢 Schema Vuoto con Numeri")
+            st.markdown("Griglia da riempire (ideale per stampare):")
+            griglia_vuota, numeri = st.session_state.generatore.griglia_vuota_html()
+            st.markdown(griglia_vuota, unsafe_allow_html=True)
+        
+        # Statistiche
+        st.markdown("---")
+        st.subheader("📊 Statistiche")
+        
+        tutte_parole = st.session_state.generatore._trova_parole_orizzontali() + st.session_state.generatore._trova_parole_verticali()
+        celle_piene = sum(1 for riga in st.session_state.generatore.griglia for cella in riga if cella != '.')
+        totale_celle = righe * colonne
+        percentuale = (celle_piene / totale_celle) * 100
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Parole Totali", len(tutte_parole))
+        col2.metric("Orizzontali", len(st.session_state.generatore._trova_parole_orizzontali()))
+        col3.metric("Verticali", len(st.session_state.generatore._trova_parole_verticali()))
+        col4.metric("Celle Piene", f"{celle_piene}/{totale_celle} ({percentuale:.1f}%)")
+        
+        # Definizioni
+        st.markdown("---")
+        st.subheader("📚 Definizioni")
+        
+        tab1, tab2 = st.tabs(["Orizzontali", "Verticali"])
+        
+        with tab1:
+            for parola, r, c, orient in st.session_state.generatore._trova_parole_orizzontali():
+                definizione = st.session_state.dizionario.get_definizione(parola.lower())
+                st.markdown(f"**{parola}** - {definizione}")
+        
+        with tab2:
+            for parola, r, c, orient in st.session_state.generatore._trova_parole_verticali():
+                definizione = st.session_state.dizionario.get_definizione(parola.lower())
+                st.markdown(f"**{parola}** - {definizione}")
+    
+    else:
+        st.info("👈 Imposta le dimensioni e clicca su 'GENERA NUOVO CRUCIVERBA' per iniziare!")
+        
+        # Esempio di anteprima
+        st.markdown("---")
+        st.subheader("🎯 Anteprima")
+        st.markdown("""
+        Il generatore creerà cruciverba con:
+        - Parole casuali dal database italiano
+        - Definizioni automatiche
+        - Due visualizzazioni: compilata e schema vuoto
+        - Esportazione in formato TXT
+        """)
 
-# ==================== AVVIO APPLICAZIONE ====================
 if __name__ == "__main__":
-    # Crea la finestra principale
-    root = tk.Tk()
-    
-    # Imposta icona (opzionale - decommenta se hai un file icona.ico)
-    # try:
-    #     root.iconbitmap(default='icona.ico')
-    # except:
-    #     pass
-    
-    # Imposta dimensione minima
-    root.minsize(700, 600)
-    
-    # Crea e avvia l'applicazione
-    app = CruciverbaApp(root)
-    
-    # Centra la finestra sullo schermo
-    root.update_idletasks()
-    width = root.winfo_width()
-    height = root.winfo_height()
-    x = (root.winfo_screenwidth() // 2) - (width // 2)
-    y = (root.winfo_screenheight() // 2) - (height // 2)
-    root.geometry(f'{width}x{height}+{x}+{y}')
-    
-    # Avvia il loop principale
-    root.mainloop()
+    main()
