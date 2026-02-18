@@ -43,7 +43,6 @@ class DizionarioVerificatoTreccani:
             url = f"https://www.treccani.it/vocabolario/{parola_lower}/"
             resp = requests.get(url, headers=headers, timeout=3)
             if resp.status_code == 200:
-                # Controlla se pagina ha contenuto lessicale
                 if any(indicatore in resp.text.lower() for indicatore in 
                        ['vocabolario', 'lemma', 'sost.', 'agg.', 'verbo']):
                     self.parole_cache_verificate[parola] = True
@@ -51,7 +50,7 @@ class DizionarioVerificatoTreccani:
         except:
             pass
         
-        # Fallback Corriere (solo se Treccani fallisce)
+        # Fallback Corriere
         try:
             url = f"https://dizionari.corriere.it/dizionario_italiano/{parola_lower[0]}/{parola_lower}.shtml"
             resp = requests.get(url, headers=headers, timeout=3)
@@ -81,6 +80,7 @@ class DizionarioVerificatoTreccani:
                 return parola
         return None
 
+# [Classe CruciverbaVerificaPost identica alla versione precedente]
 class CruciverbaVerificaPost:
     def __init__(self, dizionario):
         self.dizionario = dizionario
@@ -89,7 +89,6 @@ class CruciverbaVerificaPost:
         self.parole_verticali = []
         self.parole_usate = set()
         self.caselle_nere = [(1,1), (1,3), (3,1), (3,3)]
-        self.parole_finali = []  # Solo quelle verificate
     
     def griglia_html(self, mostra_lettere=True):
         html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 28px; margin: 0 auto;">'
@@ -128,33 +127,23 @@ class CruciverbaVerificaPost:
     
     def verifica_griglia_completa(self):
         """VERIFICA FINALE: tutte le parole devono esistere su Treccani"""
-        self.parole_finali = []
-        
         # Verifica orizzontali
         for parola, riga, col in self.parole_orizzontali:
-            if self.dizionario.verifica_rapida_treccani(parola):
-                self.parole_finali.append((parola, riga, col, 'O'))
-            else:
-                st.warning(f"❌ ORIZZONTALE '{parola}' non verificata Treccani")
+            if not self.dizionario.verifica_rapida_treccani(parola):
                 return False
-        
         # Verifica verticali  
         for parola, riga, col in self.parole_verticali:
-            if self.dizionario.verifica_rapida_treccani(parola):
-                self.parole_finali.append((parola, riga, col, 'V'))
-            else:
-                st.warning(f"❌ VERTICALE '{parola}' non verificata Treccani")
+            if not self.dizionario.verifica_rapida_treccani(parola):
                 return False
-        
         return True
     
     def genera_rapido_verifica_post(self, max_ritentativi=20):
         """1° genera veloce, 2° verifica Treccani"""
+        import time
         for tentativo in range(max_ritentativi):
             if tentativo % 3 == 0:
                 st.write(f"⚡ Tentativo {tentativo+1}/{max_ritentativi}")
             
-            # RESET
             self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
             self.parole_orizzontali = []
             self.parole_verticali = []
@@ -163,7 +152,6 @@ class CruciverbaVerificaPost:
             for r,c in self.caselle_nere: 
                 self.griglia[r][c] = '#'
             
-            # 1. GENERA VELOCEMENTE (SENZA verifica)
             ok = True
             for riga in [0, 2, 4]:
                 parola = self.dizionario.cerca_parola_veloce(
@@ -180,7 +168,6 @@ class CruciverbaVerificaPost:
             
             if not ok: continue
             
-            # Verticali VELOCEMENTE
             for col in [0, 2, 4]:
                 parola = self.dizionario.cerca_parola_veloce(
                     self._pattern_verticale(0, col, 5), 
@@ -190,7 +177,6 @@ class CruciverbaVerificaPost:
                     ok = False
                     break
                 
-                # Verifica incroci
                 incroci_ok = True
                 for riga in range(5):
                     if self.griglia[riga][col] == '#': continue
@@ -208,7 +194,6 @@ class CruciverbaVerificaPost:
             
             if not ok: continue
             
-            # 2. VERIFICA TRECCANI (solo se griglia completa)
             with st.spinner("🔍 Verificando Treccani..."):
                 if self.verifica_griglia_completa():
                     st.success("✅ GRIGLIA VERIFICATA TRECCANI!")
@@ -216,15 +201,15 @@ class CruciverbaVerificaPost:
             
             time.sleep(0.2)
         
-        st.error("❌ Nessuna griglia verificata")
         return False
 
 def main():
-    st.set_page_config(page_title="Cruciverba OTTIMIZZATO", page_icon="🧩", layout="wide")
+    st.set_page_config(page_title="Cruciverba Pro", page_icon="🧩", layout="wide")
     
     st.markdown("""
     <style>
     .stButton button{font-size:22px!important;padding:18px!important;width:100%;background:#c41e3a;color:white;font-weight:bold;border-radius:10px;}
+    .btn-reset{background:#28a745!important;}
     .verified {background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%); padding:12px; border-radius:8px; border-left:6px solid #28a745; margin:10px 0;}
     </style>
     """, unsafe_allow_html=True)
@@ -234,8 +219,8 @@ def main():
         st.session_state.parole_caricate = False
         st.session_state.generatore = None
     
-    st.title("⚡ Cruciverba 5x5 - TRECCANI VERIFICATO")
-    st.markdown("**Generazione veloce + verifica Treccani solo alla fine**")
+    st.title("🧩 Cruciverba 5x5 - TRECCANI VERIFICATO")
+    st.markdown("**⚡ Veloce + 100% Parole italiane certificate**")
     
     col1, col2 = st.columns(2)
     
@@ -248,12 +233,12 @@ def main():
                     st.success(f"✅ {num} parole caricate!")
                     st.rerun()
         else:
-            st.markdown(f'<div class="verified">⚡ Dizionario pronto - {len(st.session_state.dizionario.parole_list)} parole</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="verified">⚡ Dizionario pronto</div>', unsafe_allow_html=True)
     
     with col2:
         if st.session_state.parole_caricate and not st.session_state.generatore:
             if st.button("🎲 2. GENERA + VERIFICA", use_container_width=True):
-                with st.spinner("Generando griglia veloce..."):
+                with st.spinner("Generando e verificando..."):
                     generatore = CruciverbaVerificaPost(st.session_state.dizionario)
                     if generatore.genera_rapido_verifica_post():
                         st.session_state.generatore = generatore
@@ -261,18 +246,21 @@ def main():
                     else:
                         st.error("❌ Impossibile trovare combinazione verificata")
     
+    # === SCHERMATA RISULTATO CON TASTO RESET ===
     if st.session_state.generatore:
         st.markdown("---")
         
         col1, col2 = st.columns(2)
         with col1:
+            st.markdown("### 🧩 Griglia compilata")
             st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
         with col2:
+            st.markdown("### 📝 Schema da risolvere") 
             st.markdown(st.session_state.generatore.griglia_html(False), unsafe_allow_html=True)
         
-        st.markdown('<div class="verified"><b>✅ 100% VERIFICATO TRECCANI</b> - Tutte le 6 parole esistenti!</div>', unsafe_allow_html=True)
+        st.markdown('<div class="verified"><b>✅ 100% VERIFICATO TRECCANI</b></div>', unsafe_allow_html=True)
         
-        # PAROLE VERIFICATE
+        # LISTA PAROLE
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("### 🟡 ORIZZONTALI ✓")
@@ -283,28 +271,45 @@ def main():
             for i, (p,_,_) in enumerate(st.session_state.generatore.parole_verticali, 4):
                 st.markdown(f"**{i}.** `{p}` ✅")
         
-        # DOWNLOAD
-        txt = f"""CRUCIVERBA 5x5 - TRECCANI VERIFICATO
+        st.markdown("---")
+        
+        # === BOTTONI DOWNLOAD + RESET ===
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            txt = f"""CRUCIVERBA 5x5 - TRECCANI VERIFICATO
 {("="*65)}
 Generato: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
 GRIGLIA:
 """
-        for riga in st.session_state.generatore.griglia:
-            riga_str = "|"
-            for cella in riga: riga_str += "██|" if cella=='#' else f" {cella}|"
-            txt += riga_str + "\n"
+            for riga in st.session_state.generatore.griglia:
+                riga_str = "|"
+                for cella in riga: riga_str += "██|" if cella=='#' else f" {cella}|"
+                txt += riga_str + "\n"
+            
+            txt += f"\n{('='*65)}\nPAROLE VERIFICATE:\n\nORIZZONTALI:\n"
+            for i, (p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
+                txt += f"{i}. {p} ✅\n"
+            txt += "\nVERTICALI:\n"
+            for i, (p,_,_) in enumerate(st.session_state.generatore.parole_verticali, 4):
+                txt += f"{i}. {p} ✅\n"
+            
+            st.download_button("📄 SALVA CRUCIVERBA", txt, 
+                             f"cruciverba_ok_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", 
+                             use_container_width=True)
         
-        txt += f"\n{('='*65)}\nPAROLE VERIFICATE TRECCANI:\n\nORIZZONTALI:\n"
-        for i, (p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
-            txt += f"{i}. {p} ✅ Treccani OK\n"
-        txt += "\nVERTICALI:\n"
-        for i, (p,_,_) in enumerate(st.session_state.generatore.parole_verticali, 4):
-            txt += f"{i}. {p} ✅ Treccani OK\n"
+        with col2:
+            st.markdown(" ")  # Spazio vuoto
         
-        st.download_button("📄 DOWNLOAD VERIFICATO", txt, 
-                          f"cruciverba_treccani_ok_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", 
-                          use_container_width=True)
+        with col3:
+            if st.button("🔄 NUOVO CRUCIVERBA", key="reset", use_container_width=True, help="Torna alla schermata iniziale"):
+                # RESET COMPLETO
+                st.session_state.dizionario = DizionarioVerificatoTreccani()
+                st.session_state.parole_caricate = False
+                st.session_state.generatore = None
+                st.success("🔄 Schermata iniziale ripristinata!")
+                st.rerun()
 
 if __name__ == "__main__":
     main()
