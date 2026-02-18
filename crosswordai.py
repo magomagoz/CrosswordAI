@@ -8,16 +8,15 @@ class DizionarioItaliano:
     def __init__(self):
         # Parole italiane vere di 5 lettere
         self.parole_5 = [
-            "AMORE", "VITA", "MORTE", "TEMPO", "NOTTE", "GIORNO", "SOLE", "LUNA",
-            "FIORE", "ALBERO", "ACQUA", "TERRA", "ARIA", "FUOCO", "PANE", "VINO",
-            "LIBRO", "CANE", "GATTO", "CASA", "SCUOLA", "ESTATE", "INVERNO",
-            "PRIMA", "DOPO", "BIANCO", "NERO", "ROSSO", "VERDE", "GIALLO",
-            "GRANDE", "PICCOLO", "NUOVO", "VECCHIO", "DOLCE", "AMARO",
-            "PORTA", "CARTA", "PENNA", "BANCO", "SEDIA", "TAVOLO", "LETTO",
-            "MONTE", "MARE", "FIUME", "LAGO", "ISOLE", "PONTE", "STRADA",
-            "SQUOLA", "TEATRO", "CINEMA", "MUSICA", "DANZA", "CANTO",
-            "COLORE", "DISEGNO", "PITTURA", "FOTO", "LIBRO", "RIVISTA",
-            "MEDICO", "DOTTORE", "INFERMIERE", "OSPEDALE", "FARMACIA"
+            "AMORE", "MORTE", "TEMPO", "NOTTE",
+            "FIORE", "ACQUA", "TERRA", "FUOCO",
+            "LIBRO", "GATTO",
+            "PRIMA", "ROSSO", "VERDE",
+            "NUOVO", "DOLCE", "AMARO",
+            "PORTA", "CARTA", "PENNA", "BANCO", "SEDIA","LETTO",
+            "MONTE", "FIUME", "ISOLE", "PONTE",
+            "DANZA", "CANTO",
+            "LIBRO"
         ]
         
         self.tutte_parole = set(self.parole_5)
