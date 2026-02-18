@@ -5,8 +5,8 @@ from datetime import datetime
 import re
 
 # --- CONFIGURAZIONE GRIGLIA ---
-COLS = 13
-ROWS = 9
+COLS = 9
+ROWS = 13
 
 class DizionarioItalianoCompleto:
     def __init__(self):
