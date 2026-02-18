@@ -6,17 +6,17 @@ import random
 ROWS = 13
 COLS = 9
 
-class MotoreUltraStabile:
+class MotoreAvanzato:
     def __init__(self):
-        self.dizionario = {i: [] for i in range(3, 10)}
+        self.dizionario = {i: [] for i in range(2, 11)}
+        self.set_parole = set() # Per ricerca rapida esistenza
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
-        self.parole_inserite = []
-        # Parole di emergenza se il download fallisce
-        self.fallback = ["CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE", "CITTA"]
+        self.parole_usate = set()
+        self.fallback = ["CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE"]
 
     def reset_griglia(self):
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
-        self.parole_inserite = []
+        self.parole_usate = set()
 
     def carica_parole(self):
         url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
@@ -26,15 +26,57 @@ class MotoreUltraStabile:
                 linee = res.text.splitlines()
                 for l in linee:
                     p = l.strip().upper()
-                    if p.isalpha() and 3 <= len(p) <= 9:
+                    if p.isalpha() and 2 <= len(p) <= 10:
                         self.dizionario[len(p)].append(p)
+                        self.set_parole.add(p)
                 return True
-        except:
-            pass
-        # Se fallisce, usa fallback
+        except: pass
         for p in self.fallback:
             self.dizionario[len(p)].append(p)
+            self.set_parole.add(p)
         return True
+
+    def verifica_legalita_incroci(self, r, c, parola, orientamento):
+        """Controlla che i nuovi segmenti creati siano parole italiane valide"""
+        temp_griglia = [r[:] for r in self.griglia]
+        lung = len(parola)
+        
+        # Inserimento temporaneo
+        for i in range(lung):
+            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
+            temp_griglia[rr][cc] = parola[i]
+
+        # Controlla i segmenti perpendicolari creati
+        check_orient = 'O' if orientamento == 'V' else 'V'
+        for i in range(lung):
+            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
+            # Estrai il segmento che passa per (rr, cc)
+            seg = self.estrai_segmento(temp_griglia, rr, cc, check_orient)
+            if len(seg) > 1 and ' ' not in seg:
+                if seg not in self.set_parole:
+                    return False
+        return True
+
+    def estrai_segmento(self, griglia, r, c, orient):
+        """Estrae la parola completa che passa per una coordinata"""
+        res = ""
+        if orient == 'O':
+            # Vai a sinistra
+            c_start = c
+            while c_start > 0 and griglia[r][c_start-1] != '#': c_start -= 1
+            # Vai a destra
+            c_end = c
+            while c_end < COLS - 1 and griglia[r][c_end+1] != '#': c_end += 1
+            for j in range(c_start, c_end + 1): res += griglia[r][j]
+        else:
+            # Vai su
+            r_start = r
+            while r_start > 0 and griglia[r_start-1][c] != '#': r_start -= 1
+            # Vai giù
+            r_end = r
+            while r_end < ROWS - 1 and griglia[r_end+1][c] != '#': r_end += 1
+            for j in range(r_start, r_end + 1): res += griglia[j][c]
+        return res
 
     def inserisci(self, parola, r, c, orientamento):
         lung = len(parola)
@@ -42,104 +84,100 @@ class MotoreUltraStabile:
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
             self.griglia[rr][cc] = parola[i]
         
-        # Caselle nere
+        # Delimitazione con nere
         if orientamento == 'O':
             if c - 1 >= 0: self.griglia[r][c-1] = '#'
             if c + lung < COLS: self.griglia[r][c+lung] = '#'
         else:
             if r - 1 >= 0: self.griglia[r-1][c] = '#'
             if r + lung < ROWS: self.griglia[r+lung][c] = '#'
-        self.parole_inserite.append(parola)
+        self.parole_usate.add(parola)
 
     def aggiungi_parola(self):
-        # 1. PRIMA PAROLA
-        if not self.parole_inserite:
-            # Trova la prima lunghezza disponibile nel dizionario
-            for l in [5, 4, 6, 3, 7]:
-                if self.dizionario[l]:
-                    p = random.choice(self.dizionario[l])
-                    self.inserisci(p, 6, (COLS - l) // 2, 'O')
-                    return True, f"Inizio con: {p}"
-            return False, "Dizionario vuoto!"
+        # 1. Prima parola
+        if not self.parole_usate:
+            p = random.choice(self.dizionario[7])
+            self.inserisci(p, 6, 1, 'O')
+            return True, f"Inizio: {p}"
 
-        # 2. INCROCI
+        # 2. Tentativo Incrocio Intelligente
         coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
         random.shuffle(coords)
         
-        lunghezze = [3, 4, 5, 6, 7]
-        random.shuffle(lunghezze)
-
         for r, c, o in coords:
-            for l in lunghezze:
-                if not self.dizionario[l]: continue
-                
-                # Verifica spazio e incrocio esistente
+            for l in [3, 4, 5, 6]:
                 patt = ""
                 ha_incrocio = False
-                fuori_limiti = False
-                
+                valido = True
                 for i in range(l):
                     rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                    if rr >= ROWS or cc >= COLS:
-                        fuori_limiti = True; break
+                    if rr >= ROWS or cc >= COLS or self.griglia[rr][cc] == '#':
+                        valido = False; break
                     char = self.griglia[rr][cc]
-                    if char == '#': fuori_limiti = True; break
                     if char.isalpha(): ha_incrocio = True
                     patt += char
                 
-                if fuori_limiti or not ha_incrocio: continue
+                if not valido or not ha_incrocio: continue
+
+                candidati = [p for p in self.dizionario[l] if p not in self.parole_usate and all(patt[j] == ' ' or patt[j] == p[j] for j in range(l))]
                 
-                # Cerca parola compatibile
-                candidati = [p for p in self.dizionario[l] if all(patt[i] == ' ' or patt[i] == p[i] for i in range(l))]
-                if candidati:
-                    self.inserisci(random.choice(candidati), r, c, o)
-                    return True, f"Incrociato: {candidati[0]}"
-        
-        return False, "Nessun incrocio trovato."
+                for p_cand in candidati[:20]: # Controlla i primi 20 per velocità
+                    if self.verifica_legalita_incroci(r, c, p_cand, o):
+                        self.inserisci(p_cand, r, c, o)
+                        return True, f"Inserito: {p_cand}"
+
+        # 3. Se bloccato, prova a mettere una casella nera in un punto vuoto strategico
+        for _ in range(5):
+            br, bc = random.randint(0, ROWS-1), random.randint(0, COLS-1)
+            if self.griglia[br][bc] == ' ':
+                self.griglia[br][bc] = '#'
+                return True, "Casella nera posizionata per sbloccare lo schema."
+                
+        return False, "Nessuna mossa valida trovata."
 
     def render(self):
-        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:2px solid #000;">'
+        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
         for r in range(ROWS):
             html += '<tr>'
             for c in range(COLS):
                 v = self.griglia[r][c]
-                bg = "black" if v == "#" else "white"
-                color = "white" if v == "#" else "black"
+                bg = "#000" if v == "#" else "#fff"
+                color = "#fff" if v == "#" else "#000"
                 disp = v if v not in ["#", " "] else ""
-                html += f'<td style="width:35px;height:35px;border:1px solid #ccc;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;">{disp}</td>'
+                html += f'<td style="width:38px;height:38px;border:1px solid #999;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;">{disp}</td>'
             html += '</tr>'
         return html + "</table></div>"
 
 def main():
-    st.set_page_config(page_title="Cruciverba Builder", layout="centered")
-    st.title("🧩 Builder Cruciverba $13 \\times 9$")
+    st.set_page_config(page_title="Cruciverba AI", layout="centered")
+    st.title("🧩 Builder Intelligente $13 \\times 9$")
 
     if 'm' not in st.session_state:
-        st.session_state.m = MotoreUltraStabile()
+        st.session_state.m = MotoreAvanzato()
         st.session_state.caricato = False
         st.session_state.log = "Carica il dizionario."
 
     if not st.session_state.caricato:
-        if st.button("📚 CARICA DIZIONARIO", use_container_width=True):
+        if st.button("📚 1. CARICA E INDICIZZA DIZIONARIO", use_container_width=True):
             st.session_state.m.carica_parole()
             st.session_state.caricato = True
             st.rerun()
     else:
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            if st.button("➕ AGGIUNGI PAROLA", use_container_width=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("➕ AGGIUNGI PAROLA / NERA", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_parola()
                 st.session_state.log = msg
                 st.rerun()
-        with col2:
+        with c2:
             if st.button("🔄 RESET", use_container_width=True):
                 st.session_state.m.reset_griglia()
-                st.session_state.log = "Griglia resettata."
+                st.session_state.log = "Reset."
                 st.rerun()
         
         st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
-        st.caption(f"Log: {st.session_state.log}")
-        st.write(f"Parole: {', '.join(st.session_state.m.parole_inserite)}")
+        st.info(f"Log: {st.session_state.log}")
+        st.write(f"Parole usate ({len(st.session_state.m.parole_usate)}): {', '.join(list(st.session_state.m.parole_usate)[-10:])}")
 
 if __name__ == "__main__":
     main()
