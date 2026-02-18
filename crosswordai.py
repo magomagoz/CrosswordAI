@@ -124,7 +124,7 @@ class CruciverbaSchemaFisso:
         return pattern
 
     def genera(self):
-        """Genera il cruciverba completo - VERSIONE CORRETTA"""
+        """Genera il cruciverba completo - RIEMPIE TUTTE LE CASelle"""
         try:
             # 1. Inizializza griglia pulita
             self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
@@ -150,18 +150,21 @@ class CruciverbaSchemaFisso:
                 self.parole_orizzontali.append((parola, riga, 0))
                 self.parole_usate.add(parola)
             
-            # 4. VERTICALI (colonne 0,2,4)
+            # 4. VERTICALI (colonne 0,2,4) - RIEMPIE LE CASelle BIANCHE
             for col in [0, 2, 4]:
                 pattern = self._pattern_verticale(0, col, 5)
                 parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
                 if not parola:
                     return False
                 
-                # Verifica compatibilità con orizzontali esistenti
+                # ✅ RIEMPI tutte le caselle bianche + verifica incroci
                 for riga in range(5):
-                    cella = self.griglia[riga][col]
-                    if cella != '#' and cella != ' ' and cella != parola[riga]:
-                        return False
+                    if self.griglia[riga][col] == '#':  # Salta nere
+                        continue
+                    if self.griglia[riga][col] != ' ' and self.griglia[riga][col] != parola[riga]:
+                        return False  # Conflitto incrocio
+                    # ✅ RIEMPI casella bianca
+                    self.griglia[riga][col] = parola[riga]
                 
                 self.parole_verticali.append((parola, 0, col))
                 self.parole_usate.add(parola)
@@ -171,6 +174,7 @@ class CruciverbaSchemaFisso:
         except Exception as e:
             st.error(f"Errore generazione: {e}")
             return False
+
 
 # ==================== FUNZIONI ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
