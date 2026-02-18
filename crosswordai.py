@@ -204,6 +204,7 @@ class CruciverbaVerificaPost:
         return False
 
 def main():
+    #st.banner(
     st.set_page_config(page_title="Cruciverba Pro", page_icon="🧩", layout="wide")
     
     st.markdown("""
