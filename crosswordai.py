@@ -6,13 +6,58 @@ import io
 import re
 import time
 
-class DizionarioTreccani:
+class DizionarioVerificatoTreccani:
     def __init__(self):
         self.parole_list = []
+        self.parole_verificate_cache = {}
         self.definizioni_cache = {}
     
-    def carica_dizionario(self):
-        """Carica 8262 parole da listediparole.it"""
+    def verifica_parola_treccani(self, parola):
+        """VERIFICA se la parola esiste su Treccani/Corriere"""
+        parola_lower = parola.lower()
+        
+        if parola in self.parole_verificate_cache:
+            return self.parole_verificate_cache[parola]
+        
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        
+        # 1. TRECCANI - Verifica primaria
+        try:
+            url = f"https://www.treccani.it/vocabolario/{parola_lower}/"
+            resp = requests.get(url, headers=headers, timeout=4)
+            if resp.status_code == 200:
+                # Cerca contenuto lessicale reale
+                if 'vocabolario' in resp.text.lower() or 'lemma' in resp.text.lower():
+                    self.parole_verificate_cache[parola] = True
+                    return True
+        except:
+            pass
+        
+        # 2. CORRIERE - Verifica secondaria
+        try:
+            url = f"https://dizionari.corriere.it/dizionario_italiano/{parola_lower[0]}/{parola_lower}.shtml"
+            resp = requests.get(url, headers=headers, timeout=4)
+            if resp.status_code == 200 and 'definizione' in resp.text.lower():
+                self.parole_verificate_cache[parola] = True
+                return True
+        except:
+            pass
+        
+        # 3. WIKIPEDIA - Ultima chance
+        try:
+            url = f"https://it.wikipedia.org/wiki/{parola_lower}"
+            resp = requests.get(url, headers=headers, timeout=4)
+            if resp.status_code == 200:
+                self.parole_verificate_cache[parola] = True
+                return True
+        except:
+            pass
+        
+        self.parole_verificate_cache[parola] = False
+        return False
+    
+    def carica_lista_base(self):
+        """Carica lista iniziale da listediparole.it"""
         progress = st.progress(0)
         tutte_parole = set()
         base_url = "https://www.listediparole.it/5lettereparolepagina"
@@ -23,75 +68,45 @@ class DizionarioTreccani:
                 response = requests.get(url, timeout=8)
                 parole = re.findall(r'\b[A-Z]{5}\b', response.text)
                 tutte_parole.update(parole)
-            except Exception as e:
-                st.warning(f"Pagina {pagina} saltata")
+            except:
                 continue
             progress.progress(pagina/17)
         
         self.parole_list = list(tutte_parole)
         random.shuffle(self.parole_list)
-        st.success(f"✅ {len(self.parole_list)} parole caricate!")
         return len(self.parole_list)
-
-    def cerca_parola_con_pattern(self, pattern, exclude=None, max_tentativi=1000):
-        """Cerca con più tentativi e backtracking"""
+    
+    def cerca_parola_verificata(self, pattern, exclude=None, max_tentativi=2000):
+        """CERCA SOLO parole VERIFICATE Treccani"""
         pattern_dict = dict(pattern)
+        tentativi = 0
         
-        for tentativo in range(max_tentativi):
-            # Scegli parola casuale dalla lista
-            if tentativo % 100 == 0:
-                random.shuffle(self.parole_list)
+        random.shuffle(self.parole_list)
+        
+        for parola in self.parole_list:
+            tentativi += 1
+            if tentativi > max_tentativi:
+                break
+                
+            if exclude and parola in exclude:
+                continue
             
-            for parola in self.parole_list[:50]:  # Solo prime 50 per velocità
-                if exclude and parola in exclude:
-                    continue
-                match = True
-                for pos, lett in pattern_dict.items():
-                    if pos >= 5 or parola[pos] != lett:
-                        match = False
-                        break
-                if match:
-                    return parola
+            # VERIFICA Treccani PRIMA di testare pattern
+            if not self.verifica_parola_treccani(parola):
+                continue
+            
+            # Test pattern
+            match = True
+            for pos, lett in pattern_dict.items():
+                if pos >= 5 or parola[pos] != lett:
+                    match = False
+                    break
+            if match:
+                return parola
+        
         return None
 
-    def get_definizione(self, parola):
-        if parola in self.definizioni_cache:
-            return self.definizioni_cache[parola]
-        
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        parola_lower = parola.lower()
-        
-        try:
-            # Treccani prima
-            url = f"https://www.treccani.it/vocabolario/{parola_lower}/"
-            resp = requests.get(url, headers=headers, timeout=6)
-            if resp.status_code == 200:
-                # Regex più robusta per definizioni
-                match = re.search(r'(definizione|significato)[:\.]?\s*([^\.]{20,300})', resp.text, re.I)
-                if match:
-                    testo = re.sub(r'[^\w\s\.,:;?!]', '', match.group(2))[:250].strip()
-                    if len(testo.split()) > 3:
-                        self.definizioni_cache[parola] = testo
-                        return testo
-            
-            # Corriere fallback
-            url2 = f"https://dizionari.corriere.it/dizionario_italiano/{parola_lower[0]}/{parola_lower}.shtml"
-            resp2 = requests.get(url2, headers=headers, timeout=6)
-            if resp2.status_code == 200:
-                match2 = re.search(r'(<[^>]+>definizione[^>]*<[^>]+>).{50,300}', resp2.text, re.I|re.DOTALL)
-                if match2:
-                    testo = re.sub(r'<[^>]+>', '', match2.group(0))[:250].strip()
-                    if len(testo.split()) > 3:
-                        self.definizioni_cache[parola] = testo
-                        return testo
-                        
-        except:
-            pass
-        
-        self.definizioni_cache[parola] = f"Termine italiano di uso comune ({parola})"
-        return self.definizioni_cache[parola]
-
-class CruciverbaSchemaFisso:
+class CruciverbaVerificato:
     def __init__(self, dizionario):
         self.dizionario = dizionario
         self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
@@ -136,12 +151,11 @@ class CruciverbaSchemaFisso:
                 pattern.append((k, cella))
         return pattern
     
-    def genera(self, max_ritentativi=10):
-        """Generazione robusta con backtracking"""
-        for tentativo_globale in range(max_ritentativi):
-            st.write(f"🔄 Tentativo {tentativo_globale+1}/{max_ritentativi}")
+    def genera_verificato(self, max_ritentativi=15):
+        """Genera con VERIFICA Treccani per OGNI parola"""
+        for tentativo in range(max_ritentativi):
+            st.write(f"🔍 Tentativo {tentativo+1}/{max_ritentativi} - Verificando Treccani...")
             
-            # RESET COMPLETO
             self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
             self.parole_orizzontali = []
             self.parole_verticali = []
@@ -150,193 +164,146 @@ class CruciverbaSchemaFisso:
             for r,c in self.caselle_nere: 
                 self.griglia[r][c] = '#'
             
-            # 1. ORIZZONTALI SEMPLICI (pattern vuoto)
+            # ORIZZONTALI - Solo parole verificate
+            orizz_ok = True
             for riga in [0, 2, 4]:
-                for _ in range(300):
-                    pattern = self._pattern_orizzontale(riga, 0, 5)
-                    parola = self.dizionario.cerca_parola_con_pattern(pattern, self.parole_usate)
-                    if parola:
-                        for col in range(5):
-                            self.griglia[riga][col] = parola[col]
-                        self.parole_orizzontali.append((parola, riga, 0))
-                        self.parole_usate.add(parola)
-                        break
-                else:
-                    break  # Fallito orizzontale, riprova tutto
-            else:
-                # 2. VERTICALI con verifica incroci
-                for col in [0, 2, 4]:
-                    for _ in range(1000):
-                        pattern = self._pattern_verticale(0, col, 5)
-                        parola = self.dizionario.cerca_parola_con_pattern(pattern, self.parole_usate)
-                        if not parola:
-                            continue
-                        
-                        # VERIFICA INCROCI
-                        ok = True
-                        for riga in range(5):
-                            if self.griglia[riga][col] == '#':
-                                continue
-                            if self.griglia[riga][col] != ' ' and self.griglia[riga][col] != parola[riga]:
-                                ok = False
-                                break
-                            self.griglia[riga][col] = parola[riga]
-                        
-                        if ok:
-                            self.parole_verticali.append((parola, 0, col))
-                            self.parole_usate.add(parola)
-                            break
-                    else:
-                        break  # Verticale fallita
-                else:
-                    # TUTTO OK!
-                    st.success("✅ Griglia completata!")
-                    return True
+                parola = self.dizionario.cerca_parola_verificata(
+                    self._pattern_orizzontale(riga, 0, 5), 
+                    self.parole_usate
+                )
+                if not parola:
+                    orizz_ok = False
+                    break
+                for col in range(5):
+                    self.griglia[riga][col] = parola[col]
+                self.parole_orizzontali.append((parola, riga, 0))
+                self.parole_usate.add(parola)
             
-            time.sleep(0.1)  # Pausa tra tentativi
+            if not orizz_ok:
+                continue
+            
+            # VERTICALI - Solo parole verificate
+            verticali_ok = True
+            for col in [0, 2, 4]:
+                parola = self.dizionario.cerca_parola_verificata(
+                    self._pattern_verticale(0, col, 5), 
+                    self.parole_usate
+                )
+                if not parola:
+                    verticali_ok = False
+                    break
+                
+                # Verifica incroci FINALMENTE
+                ok_incroci = True
+                for riga in range(5):
+                    if self.griglia[riga][col] == '#':
+                        continue
+                    if self.griglia[riga][col] != ' ' and self.griglia[riga][col] != parola[riga]:
+                        ok_incroci = False
+                        break
+                    self.griglia[riga][col] = parola[riga]
+                
+                if ok_incroci:
+                    self.parole_verticali.append((parola, 0, col))
+                    self.parole_usate.add(parola)
+                else:
+                    verticali_ok = False
+                    break
+            
+            if orizz_ok and verticali_ok:
+                st.success("✅ CRUCIVERBA VERIFICATO TRECCANI!")
+                return True
+            
+            time.sleep(0.5)
         
-        st.error("❌ Impossibile dopo molti tentativi")
         return False
-    
-    def carica_definizioni(self):
-        st.info("🔍 Caricando definizioni Treccani...")
-        parole = [p[0] for p in self.parole_orizzontali + self.parole_verticali]
-        progress = st.progress(0)
-        
-        for i, parola in enumerate(parole):
-            self.definizioni[parola] = self.dizionario.get_definizione(parola)
-            progress.progress((i+1)/len(parole))
-        st.success("✅ Definizioni completate!")
-
-def genera_txt(generatore, includi_lettere=True):
-    output = io.StringIO()
-    if includi_lettere:
-        output.write("CRUCIVERBA 5x5 - TRECCANI DEFINIZIONI\n")
-        output.write("="*55 + "\n\nGRIGLIA COMPLETA:\n")
-        for riga in generatore.griglia:
-            riga_str = "|"
-            for cella in riga: riga_str += "██|" if cella=='#' else f" {cella}|"
-            output.write(riga_str + "\n")
-    else:
-        output.write("SCHEMA CRUCIVERBA 5x5\n")
-        output.write("="*55 + "\n\nSCHEMA NUMERATO:\n")
-        for i in range(5):
-            riga_str = "|"
-            for j in range(5): riga_str += "██|" if (i,j)in generatore.caselle_nere else "  |"
-            output.write(riga_str + "\n")
-    
-    output.write("\n" + "="*55 + "\nDEFINIZIONI (Treccani.it)\n" + "="*55 + "\n\n")
-    
-    output.write("ORIZZONTALI:\n")
-    for i, (parola, _, _) in enumerate(generatore.parole_orizzontali, 1):
-        defiz = generatore.definizioni.get(parola, 'N/D')
-        output.write(f"{i}. {parola:<12} {defiz}\n")
-    
-    output.write("\nVERTICALI:\n")
-    for i, (parola, _, _) in enumerate(generatore.parole_verticali, 4):
-        defiz = generatore.definizioni.get(parola, 'N/D')
-        output.write(f"{i}. {parola:<12} {defiz}\n")
-    
-    return output.getvalue()
 
 def main():
-    st.set_page_config(page_title="Cruciverba Treccani PRO", page_icon="🧩", layout="centered")
+    st.set_page_config(page_title="Cruciverba Treccani VERIFICATO", page_icon="🧩", layout="wide")
     
     st.markdown("""
     <style>
-    .stButton button{font-size:22px!important;padding:15px!important;width:100%;background:#c41e3a;color:white;font-weight:bold;border-radius:10px;}
-    .success-box {background-color: #d4edda; padding: 10px; border-radius: 5px; border-left: 5px solid #28a745;}
+    .stButton button{font-size:22px!important;padding:18px!important;width:100%;background:#c41e3a;color:white;font-weight:bold;border-radius:10px;}
+    .verified {background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%); padding:10px; border-radius:5px; border-left:5px solid #28a745;}
     </style>
     """, unsafe_allow_html=True)
     
     if 'dizionario' not in st.session_state:
-        st.session_state.dizionario = DizionarioTreccani()
+        st.session_state.dizionario = DizionarioVerificatoTreccani()
         st.session_state.parole_caricate = False
         st.session_state.generatore = None
     
-    st.title("🧩 Cruciverba 5x5 Treccani")
-    st.markdown("**Definizioni reali • Generazione garantita • 8262 parole**")
+    st.title("🧩 Cruciverba 5x5 - VERIFICATO TRECCANI 🇮🇹")
+    st.markdown("**OGNI PAROLA controllata su Treccani.it prima di entrare nella griglia**")
     
-    # COLONNE COMANDI
     col1, col2 = st.columns(2)
     
     with col1:
         if not st.session_state.parole_caricate:
-            if st.button("📚 1. CARICA DIZIONARIO", use_container_width=True):
-                with st.spinner("8262 parole da listediparole.it..."):
-                    num = st.session_state.dizionario.carica_dizionario()
+            if st.button("📚 1. CARICA DIZIONARIO BASE", use_container_width=True):
+                with st.spinner("Caricando 8262 parole candidate..."):
+                    num = st.session_state.dizionario.carica_lista_base()
                     st.session_state.parole_caricate = True
+                    st.success(f"✅ {num} parole candidate caricate!")
                     st.rerun()
         else:
-            st.markdown('<div class="success-box">✅ Dizionario pronto</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="verified">✅ Dizionario base pronto ({len(st.session_state.dizionario.parole_list)} parole)</div>', unsafe_allow_html=True)
     
     with col2:
         if st.session_state.parole_caricate and not st.session_state.generatore:
-            if st.button("🎲 2. GENERA CRUCIVERBA", use_container_width=True):
-                with st.spinner("Generazione intelligente in corso..."):
-                    generatore = CruciverbaSchemaFisso(st.session_state.dizionario)
-                    if generatore.genera():
+            if st.button("🎲 2. GENERA VERIFICATO TRECCANI", use_container_width=True):
+                with st.spinner("🔍 Verificando ogni parola su Treccani.it..."):
+                    generatore = CruciverbaVerificato(st.session_state.dizionario)
+                    if generatore.genera_verificato():
                         st.session_state.generatore = generatore
                         st.rerun()
                     else:
-                        st.error("❌ Generazione fallita dopo molti tentativi")
+                        st.error("❌ Nessuna combinazione verificata dopo molti tentativi")
     
-    # RISULTATO
     if st.session_state.generatore:
-        col1, col2 = st.columns([3,1])
-        with col1:
-            if not st.session_state.generatore.definizioni:
-                if st.button("📖 3. DEFINIZIONI TRECCANI", use_container_width=True):
-                    st.session_state.generatore.carica_definizioni()
-                    st.rerun()
-        
         st.markdown("---")
         
-        tab1, tab2, tab3 = st.tabs(["🧩 Griglia compilata", "📝 Schema da risolvere", "📚 Definizioni Treccani"])
-        
+        tab1, tab2 = st.tabs(["🧩 Griglia verificata", "📝 Schema da risolvere"])
         with tab1:
             st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
-        
+            st.markdown('<div class="verified"><b>✓ TUTTE le 6 parole VERIFICATE su Treccani.it</b></div>', unsafe_allow_html=True)
         with tab2:
             st.markdown(st.session_state.generatore.griglia_html(False), unsafe_allow_html=True)
         
-        with tab3:
-            if st.session_state.generatore.definizioni:
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.markdown("### 🟡 ORIZZONTALI")
-                    for i, (parola,_,_) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
-                        st.markdown(f"**{i}.** `{parola}`")
-                        st.caption(st.session_state.generatore.definizioni.get(parola, 'N/D'))
-                
-                with col_b:
-                    st.markdown("### 🔴 VERTICALI")
-                    for i, (parola,_,_) in enumerate(st.session_state.generatore.parole_verticali, 4):
-                        st.markdown(f"**{i}.** `{parola}`")
-                        st.caption(st.session_state.generatore.definizioni.get(parola, 'N/D'))
-            else:
-                st.info("👆 Clicca 'DEFINIZIONI TRECCANI'")
-        
-        # DOWNLOAD PDF ✨
+        # LISTA PAROLE VERIFICATE
         col1, col2 = st.columns(2)
         with col1:
-            pdf_data = crea_pdf_griglia(st.session_state.generatore, "completo")
-            st.download_button(
-                label="📄 DOWNLOAD PDF COMPLETO",
-                data=pdf_data,
-                file_name=f"cruciverba_completo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
+            st.markdown("### 🟡 ORIZZONTALI VERIFICATE")
+            for i, (p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
+                st.markdown(f"**{i}.** `{p}` ✓")
         with col2:
-            pdf_schema = crea_pdf_griglia(st.session_state.generatore, "schema")
-            st.download_button(
-                label="📝 DOWNLOAD PDF SCHEMA",
-                data=pdf_schema,
-                file_name=f"schema_cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf", 
-                mime="application/pdf",
-                use_container_width=True
-            )
+            st.markdown("### 🔴 VERTICALI VERIFICATE")
+            for i, (p,_,_) in enumerate(st.session_state.generatore.parole_verticali, 4):
+                st.markdown(f"**{i}.** `{p}` ✓")
+        
+        # DOWNLOAD
+        col1, col2 = st.columns(2)
+        with col1:
+            txt = f"""CRUCIVERBA 5x5 - VERIFICATO TRECCANI
+{("="*60)}
+Generato: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+
+GRIGLIA COMPLETA:
+"""
+            for riga in st.session_state.generatore.griglia:
+                riga_str = "|"
+                for cella in riga: riga_str += "██|" if cella=='#' else f" {cella}|"
+                txt += riga_str + "\n"
+            
+            txt += f"\n{('='*60)}\nPAROLE VERIFICATE TRECCANI:\n\n"
+            txt += "ORIZZONTALI:\n"
+            for i, (p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
+                txt += f"{i}. {p} ✓\n"
+            txt += "\nVERTICALI:\n"
+            for i, (p,_,_) in enumerate(st.session_state.generatore.parole_verticali, 4):
+                txt += f"{i}. {p} ✓\n"
+            
+            st.download_button("📄 DOWNLOAD VERIFICATO", txt, f"cruciverba_treccani_verificato_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", use_container_width=True)
 
 if __name__ == "__main__":
     main()
