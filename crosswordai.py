@@ -123,70 +123,51 @@ class CruciverbaSchemaFisso:
                 pattern.append((k, cella))
         return pattern
 
-    def genera(self):
+def genera(self):
+    try:
         # 1. Pulizia e caselle nere
         self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
         for r, c in self.caselle_nere:
             self.griglia[r][c] = '#'
         
-        # 2. ORIZZONTALI (righe 0,2,4) - CORRETTO nel tuo codice
+        # 2. ORIZZONTALI ✓ (già corretto)
+        self.parole_orizzontali = []
         for riga in [0, 2, 4]:
-            pattern = self._pattern_orizzontale(riga, 0, 5)  # pattern vuoto iniziale
+            pattern = self._pattern_orizzontale(riga, 0, 5)
             parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
-            if not parola: return False
+            if not parola: 
+                return False
             
             for col in range(5):
                 self.griglia[riga][col] = parola[col]
             self.parole_orizzontali.append(parola)
             self.parole_usate.add(parola)
         
-        # 3. VERTICALI (colonne 0,2,4) - CORREZIONE CHIAVE
+        # 3. VERTICALI ✓ (CORRETTO E INDENTATO)
+        self.parole_verticali = []
         for col in [0, 2, 4]:
-            # Crea pattern con lettere già presenti dalle orizzontali
             pattern = self._pattern_verticale(0, col, 5)
             parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
-            if not parola: return False
-        
-        # VERIFICA E INSERIMENTO VERTICALE
-        for riga in range(5):
-            cella = self.griglia[riga][col]
-            if cella == '#':  # ✅ Salta caselle nere
-                continue
-            elif cella != ' ' and cella != parola[riga]:  # ❌ Conflitto incrocio
+            if not parola: 
                 return False
-            else:  # ✅ Riempie celle vuote (non ce ne sono, ma per completezza)
-                self.griglia[riga][col] = parola[riga]
-        
-        self.parole_verticali.append(parola)
-        self.parole_usate.add(parola)
-    
-    return True
-                
-        # Inserisci la parola (solo nelle celle non nere)
-        for riga in range(5):
-            if self.griglia[riga][col] == ' ':
-                self.griglia[riga][col] = parola[riga]
-                
-        verticali.append(parola)
-        self.parole_usate.add(parola)
             
-        # Verifica che tutte le celle siano piene
-        for i in range(5):
-            for j in range(5):
-                if self.griglia[i][j] == ' ':
-                    # Se c'è ancora una cella vuota, prova a riempirla
-                    # con una lettera che renda valide tutte le parole
+            # Verifica compatibilità con lettere orizzontali esistenti
+            for riga in range(5):
+                cella = self.griglia[riga][col]
+                if cella == '#':  # Salta caselle nere
+                    continue
+                if cella != ' ' and cella != parola[riga]:  # Conflitto!
                     return False
             
-        # Salva le parole trovate
-        self.parole_orizzontali = [(orizzontali[0], 0, 0), (orizzontali[1], 2, 0), (orizzontali[2], 4, 0)]
-        self.parole_verticali = [(verticali[0], 0, 0), (verticali[1], 0, 2), (verticali[2], 0, 4)]
-            
+            self.parole_verticali.append(parola)
+            self.parole_usate.add(parola)
+        
         return True
-            
+        
     except Exception as e:
         st.error(f"Errore: {e}")
         return False
+
 
 # ==================== FUNZIONI ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
