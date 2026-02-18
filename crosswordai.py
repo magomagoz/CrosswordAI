@@ -8,23 +8,25 @@ import re
 class DizionarioWeb:
     def __init__(self):
         self.parole = []
-        self.base_url = "https://www.listediparole.it/5lettereparolepagina"
     
     def carica_dizionario(self):
-        """Scarica 8262 parole da listediparole.it"""
+        st.write("📚 Scaricando 8262 parole da listediparole.it...")
         tutte_parole = set()
+        base_url = "https://www.listediparole.it/5lettereparolepagina"
+        
         for pagina in range(1, 18):
             try:
-                url = f"{self.base_url}{pagina}.htm"
+                url = f"{base_url}{pagina}.htm"
                 response = requests.get(url, timeout=5)
                 parole = re.findall(r'\b[A-Z]{5}\b', response.text)
                 tutte_parole.update(parole)
             except:
                 continue
+        
         self.parole = list(tutte_parole)
         random.shuffle(self.parole)
         return len(self.parole)
-    
+
     def cerca_parola_con_pattern(self, pattern, exclude=None):
         pattern_dict = dict(pattern)
         for parola in self.parole:
@@ -55,9 +57,9 @@ class CruciverbaSchemaFisso:
             for j in range(5):
                 if (i,j) in self.caselle_nere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px; background: black;">&nbsp;</td>'
-                elif mostra_lettere == False and (i,j) in numeri:
+                elif not mostra_lettere and (i,j) in numeri:
                     html += f'<td style="border: 2px solid black; width: 65px; height: 65px; text-align:center;font-weight:bold;color:#c41e3a;">{numeri[(i,j)]}</td>'
-                elif mostra_lettere == False:
+                elif not mostra_lettere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px;">&nbsp;</td>'
                 else:
                     cella = self.griglia[i][j]
@@ -89,6 +91,7 @@ class CruciverbaSchemaFisso:
         
         # ORIZZONTALI
         for riga in [0,2,4]:
+            successo = False
             for _ in range(200):
                 pattern = self._pattern_orizzontale(riga, 0, 5)
                 parola = self.dizionario.cerca_parola_con_pattern(pattern, self.parole_usate)
@@ -96,11 +99,13 @@ class CruciverbaSchemaFisso:
                     for col in range(5): self.griglia[riga][col] = parola[col]
                     self.parole_orizzontali.append((parola, riga, 0))
                     self.parole_usate.add(parola)
+                    successo = True
                     break
-            else: return False
+            if not successo: return False
         
-        # VERTICALI  
+        # VERTICALI
         for col in [0,2,4]:
+            successo = False
             for _ in range(500):
                 pattern = self._pattern_verticale(0, col, 5)
                 parola = self.dizionario.cerca_parola_con_pattern(pattern, self.parole_usate)
@@ -115,8 +120,9 @@ class CruciverbaSchemaFisso:
                     if ok:
                         self.parole_verticali.append((parola, 0, col))
                         self.parole_usate.add(parola)
+                        successo = True
                         break
-            else: return False
+            if not successo: return False
         return True
 
 def genera_txt(generatore, includi_lettere=True):
@@ -147,68 +153,78 @@ def main():
     <style>.stButton button{font-size:24px!important;padding:20px!important;width:100%;background:#c41e3a;color:white;font-weight:bold;}</style>
     """, unsafe_allow_html=True)
     
+    # Inizializza session state
     if 'dizionario' not in st.session_state:
         st.session_state.dizionario = DizionarioWeb()
         st.session_state.parole_caricate = False
         st.session_state.generatore = None
     
     st.title("🧩 Cruciverba 5x5")
-    st.markdown("**4 caselle nere - 6 parole da 5 lettere**")
+    st.markdown("**Caselle nere: B2, B4, D2, D4**")
     
-    # PRIMO PASSO: CARICA DIZIONARIO
-    if not st.session_state.parole_caricate:
-        if st.button("📚 CARICA DIZIONARIO (8262 parole)", use_container_width=True):
-            with st.spinner("Scaricando da listediparole.it..."):
-                num_parole = st.session_state.dizionario.carica_dizionario()
-                st.session_state.parole_caricate = True
-                st.success(f"✅ {num_parole} parole caricate!")
-    else:
-        # SECONDO PASSO: GENERA CRUCIVERBA
-        col1, col2 = st.columns([3,1])
-        with col1:
+    # === PASSO 1: CARICA DIZIONARIO ===
+    col1, col2 = st.columns(2)
+    with col1:
+        if not st.session_state.parole_caricate:
+            if st.button("📚 CARICA DIZIONARIO", use_container_width=True):
+                with st.spinner("Caricamento 8262 parole..."):
+                    num = st.session_state.dizionario.carica_dizionario()
+                    st.session_state.parole_caricate = True
+                    st.success(f"✅ {num} parole caricate!")
+                    st.rerun()
+        else:
+            st.success("✅ Dizionario caricato!")
+    
+    # === PASSO 2: GENERA CRUCIVERBA ===
+    with col2:
+        if st.session_state.parole_caricate and not st.session_state.generatore:
             if st.button("🎲 GENERA CRUCIVERBA", use_container_width=True):
-                with st.spinner("Creando cruciverba perfetto..."):
+                with st.spinner("Generando cruciverba..."):
                     generatore = CruciverbaSchemaFisso(st.session_state.dizionario)
                     if generatore.genera():
                         st.session_state.generatore = generatore
-                        st.success("✅ CRUCIVERBA COMPLETATO!")
+                        st.success("✅ Cruciverba generato!")
                         st.rerun()
                     else:
-                        st.error("❌ Nessuna combinazione possibile")
+                        st.error("❌ Impossibile generare")
+    
+    # === PASSO 3: MOSTRA RISULTATO ===
+    if st.session_state.generatore:
+        st.markdown("---")
         
-        # TERZO PASSO: MOSTRA RISULTATO
-        if st.session_state.generatore:
-            st.markdown("---")
-            tab1, tab2 = st.tabs(["🧩 Compilato", "📝 Schema vuoto"])
-            with tab1:
-                st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
-            with tab2:
-                st.markdown(st.session_state.generatore.griglia_html(False), unsafe_allow_html=True)
-            
-            col1,col2,col3,col4 = st.columns(4)
-            col1.metric("Parole", "6")
-            col2.metric("Orizzontali", "3")
-            col3.metric("Verticali", "3")
-            col4.metric("Nere", "4")
-            
-            col1,col2 = st.columns(2)
-            with col1:
-                st.write("**Orizzontali:**")
-                for i,(p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali,1):
-                    st.write(f"{i}. **{p}**")
-            with col2:
-                st.write("**Verticali:**")
-                for i,(p,_,_) in enumerate(st.session_state.generatore.parole_verticali,4):
-                    st.write(f"{i}. **{p}**")
-            
-            # DOWNLOAD
-            col1,col2 = st.columns(2)
-            with col1:
-                txt = genera_txt(st.session_state.generatore, True)
-                st.download_button("📄 TXT compilato", txt, f"cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
-            with col2:
-                txt = genera_txt(st.session_state.generatore, False)
-                st.download_button("📄 TXT schema", txt, f"schema_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
+        # TABS
+        tab1, tab2 = st.tabs(["🧩 Compilato", "📝 Schema"])
+        with tab1:
+            st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
+        with tab2:
+            st.markdown(st.session_state.generatore.griglia_html(False), unsafe_allow_html=True)
+        
+        # METRICHE
+        col1,col2,col3,col4 = st.columns(4)
+        col1.metric("Parole", "6")
+        col2.metric("Orizzontali", "3")
+        col3.metric("Verticali", "3")
+        col4.metric("Nere", "4")
+        
+        # PAROLE
+        col1,col2 = st.columns(2)
+        with col1:
+            st.write("**Orizzontali:**")
+            for i,(p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali,1):
+                st.write(f"{i}. **{p}**")
+        with col2:
+            st.write("**Verticali:**")
+            for i,(p,_,_) in enumerate(st.session_state.generatore.parole_verticali,4):
+                st.write(f"{i}. **{p}**")
+        
+        # DOWNLOAD
+        col1,col2 = st.columns(2)
+        with col1:
+            txt = genera_txt(st.session_state.generatore, True)
+            st.download_button("📄 TXT compilato", txt, f"cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
+        with col2:
+            txt = genera_txt(st.session_state.generatore, False)
+            st.download_button("📄 TXT schema", txt, f"schema_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
 
 if __name__ == "__main__":
     main()
