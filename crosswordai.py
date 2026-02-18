@@ -6,11 +6,11 @@ import random
 ROWS = 13
 COLS = 9
 
-class MotoreCruciverbaParziale:
+class MotoreInterattivo:
     def __init__(self):
         self.dizionario = {}
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
-        # Circa 22/25 caselle nere
+        # Circa 22-25 caselle nere per creare segmenti definiti
         self.nere = [
             (0,4), (1,1), (1,7), (2,4),
             (3,0), (3,2), (3,6), (3,8),
@@ -20,12 +20,14 @@ class MotoreCruciverbaParziale:
             (9,0), (9,2), (9,6), (9,8),
             (10,4), (11,1), (11,7), (12,4)
         ]
+        self.parole_inserite = []
         self.reset_griglia()
 
     def reset_griglia(self):
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         for r, c in self.nere:
             self.griglia[r][c] = '#'
+        self.parole_inserite = []
 
     def carica_parole(self):
         url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
@@ -41,7 +43,7 @@ class MotoreCruciverbaParziale:
             return True
         except: return False
 
-    def get_segmenti(self):
+    def get_tutti_segmenti(self):
         segmenti = []
         # Orizzontali
         for r in range(ROWS):
@@ -67,84 +69,88 @@ class MotoreCruciverbaParziale:
                 if r - inizio > 1: segmenti.append(('V', inizio, c, r - inizio))
         return segmenti
 
-    def tenta_riempimento(self, seg):
-        tipo, r_i, c_i, lung = seg
-        pattern = ""
-        for i in range(lung):
-            pattern += self.griglia[r_i + (i if tipo=='V' else 0)][c_i + (i if tipo=='O' else 0)]
-        
-        candidati = self.dizionario.get(lung, [])
-        random.shuffle(candidati)
-        
-        for p in candidati[:200]:
-            if all(pattern[i] == ' ' or pattern[i] == p[i] for i in range(lung)):
-                for i in range(lung):
-                    self.griglia[r_i + (i if tipo=='V' else 0)][c_i + (i if tipo=='O' else 0)] = p[i]
-                return True
-        return False
-
-    def genera(self):
-        self.reset_griglia()
-        segmenti = self.get_segmenti()
-        # Ordiniamo per lunghezza decrescente per dare priorità alle parole lunghe
-        segmenti.sort(key=lambda x: x[3], reverse=True)
-        
-        completato = True
+    def aggiungi_prossima_parola(self):
+        segmenti = self.get_tutti_segmenti()
+        # Filtriamo i segmenti che non sono ancora completi
+        vuoti = []
         for s in segmenti:
-            if not self.tenta_riempimento(s):
-                completato = False # Segna che non è perfetto, ma continua a riempire il resto
-        return completato
+            tipo, r_i, c_i, lung = s
+            testo_attuale = ""
+            for i in range(lung):
+                testo_attuale += self.griglia[r_i + (i if tipo=='V' else 0)][c_i + (i if tipo=='O' else 0)]
+            if ' ' in testo_attuale:
+                vuoti.append((s, testo_attuale))
+        
+        if not vuoti:
+            return False, "Griglia completata!"
 
-    def render_html(self, mostra=True):
-        html = '<div style="display: flex; justify-content: center;"><table style="border-collapse: collapse; border: 2px solid black;">'
+        # Mischiamo per non andare sempre in ordine
+        random.shuffle(vuoti)
+        
+        for (tipo, r_i, c_i, lung), pattern in vuoti:
+            candidati = self.dizionario.get(lung, [])
+            random.shuffle(candidati)
+            
+            for p in candidati[:500]:
+                if all(pattern[i] == ' ' or pattern[i] == p[i] for i in range(lung)):
+                    # Posizioniamo la parola
+                    for i in range(lung):
+                        self.griglia[r_i + (i if tipo=='V' else 0)][c_i + (i if tipo=='O' else 0)] = p[i]
+                    self.parole_inserite.append(p)
+                    return True, f"Inserita parola: {p}"
+        
+        return False, "Nessuna parola trovata per gli incroci attuali."
+
+    def render_html(self):
+        html = '<div style="display: flex; justify-content: center;"><table style="border-collapse: collapse; border: 3px solid black;">'
         for r in range(ROWS):
             html += '<tr>'
             for c in range(COLS):
                 val = self.griglia[r][c]
                 bg = "#000" if val == "#" else "#fff"
-                # Se la cella è vuota in soluzione, mettiamo un grigio leggero
-                txt = val if (mostra and val != "#") else ""
-                display_txt = txt if txt != ' ' else "?" 
-                html += f'<td style="width:35px;height:35px;border:1px solid #ddd;background:{bg};text-align:center;font-family:monospace;font-weight:bold;font-size:18px;">{display_txt}</td>'
+                txt = val if val not in ["#", " "] else ""
+                html += f'<td style="width:40px;height:40px;border:1px solid #444;background:{bg};text-align:center;font-family:sans-serif;font-weight:bold;font-size:20px;">{txt}</td>'
             html += '</tr>'
         return html + "</table></div>"
 
 def main():
-    st.set_page_config(page_title="Cruciverba Live", layout="wide")
-    st.markdown("<h2 style='text-align: center;'>🧩 Cruciverba $9 \\times 13$ Parziale</h2>", unsafe_allow_html=True)
+    st.set_page_config(page_title="Cruciverba Builder", layout="wide")
+    st.markdown("<h2 style='text-align: center;'>🧩 Costruttore di Cruciverba Passo-Passo</h2>", unsafe_allow_html=True)
 
-    if 'motore' not in st.session_state:
-        st.session_state.motore = MotoreCruciverbaParziale()
+    if 'builder' not in st.session_state:
+        st.session_state.builder = MotoreInterattivo()
         st.session_state.caricato = False
-        st.session_state.stato = "vuoto" # vuoto, parziale, completo
+        st.session_state.log = "Inizia caricando il dizionario."
 
-    if not st.session_state.caricato:
-        if st.button("📚 CARICA VOCABOLARIO", use_container_width=True):
-            with st.spinner("Caricamento..."):
-                if st.session_state.motore.carica_parole():
+    col_dx, col_sx = st.columns([1, 2])
+
+    with col_dx:
+        st.subheader("Controlli")
+        if not st.session_state.caricato:
+            if st.button("📚 1. CARICA DIZIONARIO", use_container_width=True):
+                if st.session_state.builder.carica_parole():
                     st.session_state.caricato = True
+                    st.session_state.log = "Dizionario caricato. Clicca per aggiungere la prima parola."
                     st.rerun()
-    else:
-        if st.button("🎲 GENERA / AGGIORNA SCHEMA", use_container_width=True):
-            with st.spinner("Elaborazione incroci..."):
-                completato = st.session_state.motore.genera()
-                st.session_state.stato = "completo" if completato else "parziale"
-                if not completato:
-                    st.info("⚠️ Riempimento parziale: alcuni incroci non hanno trovato parole adatte.")
-                else:
-                    st.success("✅ Schema completato con successo!")
+        else:
+            if st.button("➕ AGGIUNGI PROSSIMA PAROLA", use_container_width=True):
+                successo, msg = st.session_state.builder.aggiungi_prossima_parola()
+                st.session_state.log = msg
+                st.rerun()
+            
+            if st.button("🔄 RESET GRIGLIA", use_container_width=True):
+                st.session_state.builder.reset_griglia()
+                st.session_state.log = "Griglia resettata."
+                st.rerun()
+        
+        st.info(f"**Stato:** {st.session_state.log}")
+        
+        if st.session_state.builder.parole_inserite:
+            st.write("**Parole nello schema:**")
+            st.write(", ".join(st.session_state.builder.parole_inserite))
 
-    # Mostra sempre la griglia se è stato fatto almeno un tentativo
-    if st.session_state.stato != "vuoto":
-        st.divider()
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("### 🔍 Vista Soluzione (anche parziale)")
-            st.write(st.session_state.motore.render_html(True), unsafe_allow_html=True)
-            st.caption("I simboli '?' indicano celle che l'algoritmo non è riuscito a riempire.")
-        with c2:
-            st.markdown("### 📝 Schema da gioco")
-            st.write(st.session_state.motore.render_html(False), unsafe_allow_html=True)
+    with col_sx:
+        st.markdown(st.session_state.builder.render_html(), unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
