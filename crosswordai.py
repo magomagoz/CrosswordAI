@@ -100,8 +100,7 @@ class CruciverbaVerificaPost:
                 if (i,j) in self.caselle_nere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px; background: black;">&nbsp;</td>'
                 elif not mostra_lettere and (i,j) in numeri:
-                    html += '<td style="border: 2px solid black; width: 65px; height: 65px; position: relative; span style = position: absolute; top: 1px; left: 2px; font-size: 5px; font-weight: bold; color: #c41e3a; line-height: 1;">&nbsp;</td>'
-
+                    html += f'<td style="border: 2px solid black; width: 65px; height: 65px; text-align:center;font-weight:bold;color:#c41e3a;">{numeri[(i,j)]}</td>'
                 elif not mostra_lettere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px;">&nbsp;</td>'
                 else:
@@ -301,7 +300,7 @@ GRIGLIA:
                              use_container_width=True)
         
         with col2:
-            st.markdown(" ")  # Spazio vuoto
+            st.markdown(" ")  # Spazio vuoto
         
         with col3:
             if st.button("🔄 NUOVO CRUCIVERBA", key="reset", use_container_width=True, help="Torna alla schermata iniziale"):
@@ -314,3 +313,4 @@ GRIGLIA:
 
 if __name__ == "__main__":
     main()
+    
