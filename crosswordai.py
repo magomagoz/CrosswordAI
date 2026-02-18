@@ -113,8 +113,10 @@ class CruciverbaDinamico:
         return True
 
 def main():
-    st.set_page_config(page_title="Cruciverba 13x9", layout="wide")
-    st.title("🧩 Generatore Cruciverba $13 \times 9$")
+    st.set_page_config(page_title="Cruciverba 9x13", layout="wide")
+    st.image("banner.png", use_container_width=True)
+
+    #st.title("🧩 Generatore Cruciverba 9x13")
     
     if 'dizionario' not in st.session_state:
         st.session_state.dizionario = DizionarioItalianoCompleto()
@@ -128,7 +130,7 @@ def main():
             st.success(f"Dizionario pronto: {count} lemmi caricati.")
             st.rerun()
     else:
-        if st.button("🎲 GENERA SCHEMA 13x9"):
+        if st.button("🎲 GENERA SCHEMA 9x13"):
             cv = CruciverbaDinamico(st.session_state.dizionario)
             if cv.genera():
                 st.session_state.cruciverba = cv
