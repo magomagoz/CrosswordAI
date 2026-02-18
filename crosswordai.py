@@ -80,7 +80,6 @@ class DizionarioVerificatoTreccani:
                 return parola
         return None
 
-# [Classe CruciverbaVerificaPost identica alla versione precedente]
 class CruciverbaVerificaPost:
     def __init__(self, dizionario):
         self.dizionario = dizionario
@@ -91,21 +90,48 @@ class CruciverbaVerificaPost:
         self.caselle_nere = [(1,1), (1,3), (3,1), (3,3)]
     
     def griglia_html(self, mostra_lettere=True):
-        html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 28px; margin: 0 auto;">'
-        numeri = {(0,0):1, (2,0):2, (4,0):3, (0,2):4, (0,4):5} if not mostra_lettere else {}
+        html = '''
+        <table style="border-collapse: collapse; font-family: monospace; font-size: 28px; margin: 0 auto;">
+        '''
+        # Numeri delle definizioni in alto a sinistra nelle celle bianche
+        numeri = {(0,0):1, (2,0):2, (4,0):3, (0,2):4, (0,4):5}
         
         for i in range(5):
             html += '<tr>'
             for j in range(5):
                 if (i,j) in self.caselle_nere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px; background: black;">&nbsp;</td>'
-                elif not mostra_lettere and (i,j) in numeri:
-                    html += f'<td style="border: 2px solid black; width: 65px; height: 65px; text-align:center;font-weight:bold;color:#c41e3a;">{numeri[(i,j)]}</td>'
-                elif not mostra_lettere:
-                    html += '<td style="border: 2px solid black; width: 65px; height: 65px;">&nbsp;</td>'
-                else:
+                elif mostra_lettere:
+                    # Griglia compilata: mostra solo lettere
                     cella = self.griglia[i][j]
-                    html += f'<td style="border: 2px solid black; width: 65px; height: 65px; text-align: center; font-weight: bold;">{cella if cella != " " else "&nbsp;"}</td>'
+                    html += f'''
+                    <td style="border: 2px solid black; width: 65px; height: 65px; 
+                               text-align: center; font-weight: bold; position: relative;">
+                        {cella if cella != " " else "&nbsp;"}
+                    </td>
+                    '''
+                else:
+                    # Schema bianco: mostra numeri piccoli in alto a sinistra
+                    if (i,j) in numeri:
+                        num = numeri[(i,j)]
+                        html += f'''
+                        <td style="border: 2px solid black; width: 65px; height: 65px; 
+                                   position: relative; background: white;">
+                            <div style="position: absolute; top: 2px; left: 2px; 
+                                        font-size: 12px; font-weight: bold; color: #666;">
+                                {num}
+                            </div>
+                            <div style="height: 100%; display: flex; align-items: center; 
+                                        justify-content: center; padding-top: 8px;">
+                                &nbsp;
+                            </div>
+                        </td>
+                        '''
+                    else:
+                        html += '''
+                        <td style="border: 2px solid black; width: 65px; height: 65px; 
+                                   background: white;">&nbsp;</td>
+                        '''
             html += '</tr>'
         return html + '</table>'
     
@@ -246,7 +272,7 @@ def main():
                     else:
                         st.error("❌ Impossibile trovare combinazione verificata")
     
-    # === SCHERMATA RISULTATO CON TASTO RESET ===
+    # === SCHERMATA RISULTATO ===
     if st.session_state.generatore:
         st.markdown("---")
         
