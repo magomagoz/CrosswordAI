@@ -6,40 +6,50 @@ import random
 ROWS = 13
 COLS = 9
 
-class MotoreCruciverbaEvoluto:
+class MotoreCorazzato:
     def __init__(self):
+        # Inizializziamo con liste per ogni lunghezza da 2 a 10
         self.dizionario = {i: [] for i in range(2, 11)}
         self.set_parole = set()
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
-        self.backup = ["CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE"]
+        
+        # VOCABOLARIO DI EMERGENZA (Sempre presente)
+        self.emergenza = [
+            "CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE", "CITTA",
+            "UOMO", "DONNA", "VITA", "CUORE", "FIUME", "NOTTE", "ERBA", "MELA", "PORTA", "VINO",
+            "ARTE", "TAVOLO", "SEDIA", "PIANO", "CARTA", "MONDO", "CORPO", "MANO", "OCCHIO", "VOCE",
+            "AMICO", "TEMPO", "MODO", "PAROLA", "PADRE", "MADRE", "FIGLIO", "STORIA", "SCUOLA", "LAVORO"
+        ]
 
     def reset_griglia(self):
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
 
     def carica_parole(self):
-        urls = [
-            "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt",
-            "https://raw.githubusercontent.com/dofine/ita-wordlist/master/parole.txt"
-        ]
-        for url in urls:
-            try:
-                res = requests.get(url, timeout=3)
-                if res.status_code == 200:
-                    linee = res.text.splitlines()
-                    for l in linee:
-                        p = l.strip().upper()
-                        if p.isalpha() and 2 <= len(p) <= 10:
-                            self.dizionario[len(p)].append(p)
-                            self.set_parole.add(p)
-                    break
-            except: continue
-        for p in self.backup:
+        # Carichiamo prima l'emergenza per essere sicuri
+        for p in self.emergenza:
+            p = p.upper()
             if p not in self.set_parole:
                 self.dizionario[len(p)].append(p)
                 self.set_parole.add(p)
-        return True
+        
+        # Tentativo download esterno
+        url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
+        try:
+            res = requests.get(url, timeout=3)
+            if res.status_code == 200:
+                linee = res.text.splitlines()
+                for l in linee:
+                    p = l.strip().upper()
+                    if p.isalpha() and 2 <= len(p) <= 10:
+                        if p not in self.set_parole:
+                            self.dizionario[len(p)].append(p)
+                            self.set_parole.add(p)
+                return True
+        except:
+            pass
+        return True # Ritorna True comunque perché abbiamo l'emergenza
 
     def estrai_segmento(self, griglia, r, c, orient):
         res = ""
@@ -63,8 +73,11 @@ class MotoreCruciverbaEvoluto:
         
         for i in range(lung):
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
-            # PROTEZIONE SOVRASCRITTURA: Se la cella è già occupata da una lettera diversa, fallisce
+            # 1. BLOCCA SOVRASCRITTURA CON LETTERE DIVERSE
             if temp_griglia[rr][cc].isalpha() and temp_griglia[rr][cc] != parola[i]:
+                return False
+            # 2. BLOCCA SOVRASCRITTURA DI CASELLE NERE
+            if temp_griglia[rr][cc] == '#':
                 return False
             temp_griglia[rr][cc] = parola[i]
 
@@ -83,7 +96,7 @@ class MotoreCruciverbaEvoluto:
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
             self.griglia[rr][cc] = parola[i]
         
-        # Nere solo se non cancellano lettere esistenti
+        # Caselle nere solo ai bordi e solo se la cella è vuota
         if orientamento == 'O':
             if c - 1 >= 0 and self.griglia[r][c-1] == ' ': self.griglia[r][c-1] = '#'
             if c + lung < COLS and self.griglia[r][c+lung] == ' ': self.griglia[r][c+lung] = '#'
@@ -93,48 +106,48 @@ class MotoreCruciverbaEvoluto:
         self.parole_usate.add(parola)
 
     def aggiungi_mossa(self):
+        # --- PRIMA PAROLA ---
         if not self.parole_usate:
-            p = random.choice(self.dizionario[7])
-            self.inserisci(p, 6, 1, 'O')
-            return True, f"Partenza: {p}"
+            for lung in [7, 6, 5]:
+                if self.dizionario[lung]:
+                    p = random.choice(self.dizionario[lung])
+                    self.inserisci(p, 6, (COLS - lung) // 2, 'O')
+                    return True, f"Inizio con: {p}"
+            return False, "Dizionario vuoto!"
 
+        # --- INCROCI ---
         coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
         random.shuffle(coords)
         
-        # Prova prima a inserire parole (da lunghe a corte)
+        # Proviamo lunghezze da 6 a 3
         for r, c, o in coords:
             for l in [6, 5, 4, 3]:
                 if not self.dizionario[l]: continue
                 
                 patt = ""
                 ha_incrocio = False
-                valido = True
+                spazio_libero = True
+                
                 for i in range(l):
                     rr, cc = (r+i, c) if o == 'V' else (r, c+i)
                     if rr >= ROWS or cc >= COLS or self.griglia[rr][cc] == '#':
-                        valido = False; break
+                        spazio_libero = False; break
                     char = self.griglia[rr][cc]
                     if char.isalpha(): ha_incrocio = True
                     patt += char
                 
-                if not valido or not ha_incrocio: continue
+                if not spazio_libero or not ha_incrocio: continue
 
+                # Filtro candidati (non usati e compatibili col pattern)
                 candidati = [p for p in self.dizionario[l] if p not in self.parole_usate and all(patt[j] == ' ' or patt[j] == p[j] for j in range(l))]
                 random.shuffle(candidati)
                 
-                for p_cand in candidati[:30]:
+                for p_cand in candidati[:20]:
                     if self.verifica_legalita(r, c, p_cand, o):
                         self.inserisci(p_cand, r, c, o)
-                        return True, f"Parola: {p_cand}"
+                        return True, f"Aggiunta: {p_cand}"
 
-        # Solo se falliscono tutti i tentativi di parola, metti UNA casella nera strategica
-        for r, c, o in coords:
-            if self.griglia[r][c] == ' ':
-                # Controlla che non isoli celle singole
-                self.griglia[r][c] = '#'
-                return True, "Casella nera tattica."
-                
-        return False, "Griglia satura."
+        return False, "Nessun incrocio valido trovato. Prova a resettare."
 
     def render(self):
         html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
@@ -145,39 +158,40 @@ class MotoreCruciverbaEvoluto:
                 bg = "#000" if v == "#" else "#fff"
                 color = "#fff" if v == "#" else "#000"
                 disp = v if v not in ["#", " "] else ""
-                html += f'<td style="width:38px;height:38px;border:1px solid #aaa;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;">{disp}</td>'
+                html += f'<td style="width:38px;height:38px;border:1px solid #ddd;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;font-family:sans-serif;">{disp}</td>'
             html += '</tr>'
         return html + "</table></div>"
 
 def main():
-    st.set_page_config(page_title="Cruciverba Builder", layout="centered")
-    st.title("🧩 Builder Cruciverba 13x9")
+    st.set_page_config(page_title="Cruciverba Pro", layout="centered")
+    st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9 (Stabile)</h2>", unsafe_allow_html=True)
 
     if 'm' not in st.session_state:
-        st.session_state.m = MotoreCruciverbaEvoluto()
+        st.session_state.m = MotoreCorazzato()
         st.session_state.caricato = False
-        st.session_state.log = "Pronto."
+        st.session_state.log = "Carica il dizionario."
 
     if not st.session_state.caricato:
-        if st.button("📚 CARICA DIZIONARIO", use_container_width=True):
+        if st.button("📚 1. CARICA DIZIONARIO", use_container_width=True):
             st.session_state.m.carica_parole()
             st.session_state.caricato = True
             st.rerun()
     else:
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("➕ PROSSIMA MOSSA", use_container_width=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("➕ AGGIUNGI PAROLA", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_mossa()
                 st.session_state.log = msg
                 st.rerun()
-        with c2:
+        with col2:
             if st.button("🔄 RESET", use_container_width=True):
                 st.session_state.m.reset_griglia()
-                st.session_state.log = "Reset."
+                st.session_state.log = "Griglia pulita."
                 st.rerun()
         
         st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
         st.info(f"Log: {st.session_state.log}")
+        st.write(f"Parole usate: {', '.join(list(st.session_state.m.parole_usate))}")
 
 if __name__ == "__main__":
     main()
