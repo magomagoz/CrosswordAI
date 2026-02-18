@@ -5,12 +5,29 @@ from datetime import datetime
 import io
 import re
 
+# Definizioni manuali per parole comuni (espandibile)
+DEFINIZIONI = {
+    # Comuni
+    'CASA': 'Edificio dove si abita',
+    'CANI': 'Animali domestici fedeli', 
+    'LUNA': 'Satellitare naturale terrestre',
+    'SOLE': 'Stella del sistema solare',
+    'MARE': 'Estesa massa d\'acqua salata',
+    'FARO': 'Torri con luci per navi',
+    'PINO': 'Albero sempreverde resinoso',
+    'ROSA': 'Fiore simbolo dell\'amore',
+    'LAGO': 'Acqua dolce circondata da terra',
+    'MONT': 'Elevazione naturale del terreno',
+    # Aggiungi altre...
+    'DEFAULT': 'Parola di default'
+}
+
 class DizionarioWeb:
     def __init__(self):
         self.parole = []
     
     def carica_dizionario(self):
-        st.write("📚 Scaricando 8262 parole da listediparole.it...")
+        st.write("📚 Scaricando 8262 parole...")
         tutte_parole = set()
         base_url = "https://www.listediparole.it/5lettereparolepagina"
         
@@ -125,25 +142,41 @@ class CruciverbaSchemaFisso:
             if not successo: return False
         return True
 
+    def get_definizioni(self):
+        """Restituisce definizioni per tutte le parole"""
+        defizioni = {}
+        for parola, riga, col in self.parole_orizzontali + self.parole_verticali:
+            defizioni[parola] = DEFINIZIONI.get(parola, f"({parola} - definizione da aggiungere)")
+        return defizioni
+
 def genera_txt(generatore, includi_lettere=True):
     output = io.StringIO()
+    defizioni = generatore.get_definizioni()
+    
     if includi_lettere:
-        output.write("CRUCIVERBA 5x5\n"+"="*30+"\n\n")
+        output.write("CRUCIVERBA 5x5 CON DEFINIZIONI\n"+"="*40+"\n\n")
         for riga in generatore.griglia:
             riga_str = "|"
             for cella in riga: riga_str += "██|" if cella=='#' else f" {cella}|"
             output.write(riga_str+"\n")
     else:
-        output.write("SCHEMA VUOTO\n"+"="*30+"\n\n")
+        output.write("SCHEMA CRUCIVERBA 5x5\n"+"="*40+"\n\n")
         for i in range(5):
             riga_str = "|"
             for j in range(5): riga_str += "██|" if (i,j)in generatore.caselle_nere else "  |"
             output.write(riga_str+"\n")
     
-    output.write("\nORIZZONTALI:\n")
-    for i,(p,_,_) in enumerate(generatore.parole_orizzontali,1): output.write(f"{i}. {p}\n")
+    output.write("\n" + "="*40 + "\n")
+    output.write("DEFINIZIONI\n" + "="*40 + "\n\n")
+    
+    output.write("ORIZZONTALI:\n")
+    for i, (parola, _, _) in enumerate(generatore.parole_orizzontali, 1):
+        output.write(f"{i}. {parola} - {defizioni.get(parola, 'N/D')}\n")
+    
     output.write("\nVERTICALI:\n")
-    for i,(p,_,_) in enumerate(generatore.parole_verticali,4): output.write(f"{i}. {p}\n")
+    for i, (parola, _, _) in enumerate(generatore.parole_verticali, 4):
+        output.write(f"{i}. {parola} - {defizioni.get(parola, 'N/D')}\n")
+    
     return output.getvalue()
 
 def main():
@@ -153,16 +186,15 @@ def main():
     <style>.stButton button{font-size:24px!important;padding:20px!important;width:100%;background:#c41e3a;color:white;font-weight:bold;}</style>
     """, unsafe_allow_html=True)
     
-    # Inizializza session state
     if 'dizionario' not in st.session_state:
         st.session_state.dizionario = DizionarioWeb()
         st.session_state.parole_caricate = False
         st.session_state.generatore = None
     
-    st.title("🧩 Cruciverba 5x5")
+    st.title("🧩 Cruciverba 5x5 CON DEFINIZIONI")
     st.markdown("**Caselle nere: B2, B4, D2, D4**")
     
-    # === PASSO 1: CARICA DIZIONARIO ===
+    # PASSO 1: CARICA DIZIONARIO
     col1, col2 = st.columns(2)
     with col1:
         if not st.session_state.parole_caricate:
@@ -175,7 +207,7 @@ def main():
         else:
             st.success("✅ Dizionario caricato!")
     
-    # === PASSO 2: GENERA CRUCIVERBA ===
+    # PASSO 2: GENERA CRUCIVERBA
     with col2:
         if st.session_state.parole_caricate and not st.session_state.generatore:
             if st.button("🎲 GENERA CRUCIVERBA", use_container_width=True):
@@ -188,16 +220,35 @@ def main():
                     else:
                         st.error("❌ Impossibile generare")
     
-    # === PASSO 3: MOSTRA RISULTATO ===
+    # PASSO 3: MOSTRA RISULTATO
     if st.session_state.generatore:
         st.markdown("---")
         
         # TABS
-        tab1, tab2 = st.tabs(["🧩 Compilato", "📝 Schema"])
+        tab1, tab2, tab3 = st.tabs(["🧩 Compilato", "📝 Schema", "📚 Definizioni"])
+        
         with tab1:
             st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
+        
         with tab2:
             st.markdown(st.session_state.generatore.griglia_html(False), unsafe_allow_html=True)
+        
+        with tab3:
+            defizioni = st.session_state.generatore.get_definizioni()
+            st.write("**Definizioni delle parole nella griglia:**")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("### Orizzontali")
+                for i, (parola, _, _) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
+                    defiz = defizioni.get(parola, 'Definizione non disponibile')
+                    st.write(f"**{i}.** {parola} → {defiz}")
+            
+            with col2:
+                st.write("### Verticali")
+                for i, (parola, _, _) in enumerate(st.session_state.generatore.parole_verticali, 4):
+                    defiz = defizioni.get(parola, 'Definizione non disponibile')
+                    st.write(f"**{i}.** {parola} → {defiz}")
         
         # METRICHE
         col1,col2,col3,col4 = st.columns(4)
@@ -206,22 +257,11 @@ def main():
         col3.metric("Verticali", "3")
         col4.metric("Nere", "4")
         
-        # PAROLE
-        col1,col2 = st.columns(2)
-        with col1:
-            st.write("**Orizzontali:**")
-            for i,(p,_,_) in enumerate(st.session_state.generatore.parole_orizzontali,1):
-                st.write(f"{i}. **{p}**")
-        with col2:
-            st.write("**Verticali:**")
-            for i,(p,_,_) in enumerate(st.session_state.generatore.parole_verticali,4):
-                st.write(f"{i}. **{p}**")
-        
         # DOWNLOAD
         col1,col2 = st.columns(2)
         with col1:
             txt = genera_txt(st.session_state.generatore, True)
-            st.download_button("📄 TXT compilato", txt, f"cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
+            st.download_button("📄 TXT con definizioni", txt, f"cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
         with col2:
             txt = genera_txt(st.session_state.generatore, False)
             st.download_button("📄 TXT schema", txt, f"schema_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
