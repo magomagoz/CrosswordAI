@@ -69,7 +69,7 @@ class CruciverbaDinamico:
             (7,1), (7,4), (7,8), (7,11)
         ]
         for r, c in self.caselle_nere:
-            self.griglia[r][c] = '#'
+            self.griglia[c][r] = '#'
 
     def griglia_html(self, mostra_lettere=True):
         html = '<div style="overflow-x:auto;"><table style="border-collapse: collapse; font-family: sans-serif; margin: 0 auto;">'
