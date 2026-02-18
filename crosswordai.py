@@ -124,37 +124,43 @@ class CruciverbaSchemaFisso:
         return pattern
 
     def genera(self):
-        """Genera il cruciverba completo"""
-        try:
-            # Inizializza griglia vuota
-            self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
+        # 1. Pulizia e caselle nere
+        self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
+        for r, c in self.caselle_nere:
+            self.griglia[r][c] = '#'
+        
+        # 2. ORIZZONTALI (righe 0,2,4) - CORRETTO nel tuo codice
+        for riga in [0, 2, 4]:
+            pattern = self._pattern_orizzontale(riga, 0, 5)  # pattern vuoto iniziale
+            parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
+            if not parola: return False
             
-            # Inserisci caselle nere
-            for r, c in self.caselle_nere:
-                self.griglia[r][c] = '#'
-            
-            # Trova e inserisci le 3 parole orizzontali (righe 0, 2, 4)
-            orizzontali = []
-            for riga in [0, 2, 4]:
-                pattern = self._pattern_orizzontale(riga, 0, 5)
-                parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
-                if not parola:
-                    return False
-                
-                # Inserisci la parola
-                for col in range(5):
-                    self.griglia[riga][col] = parola[col]
-                
-                orizzontali.append(parola)
-                self.parole_usate.add(parola)
-            
-            # Trova e inserisci le 3 parole verticali (colonne 0, 2, 4)
-            verticali = []
-            for col in [0, 2, 4]:
-                pattern = self._pattern_verticale(0, col, 5)
-                parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
-                if not parola:
-                    return False
+            for col in range(5):
+                self.griglia[riga][col] = parola[col]
+            self.parole_orizzontali.append(parola)
+            self.parole_usate.add(parola)
+        
+        # 3. VERTICALI (colonne 0,2,4) - CORREZIONE CHIAVE
+        for col in [0, 2, 4]:
+            # Crea pattern con lettere già presenti dalle orizzontali
+            pattern = self._pattern_verticale(0, col, 5)
+            parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
+            if not parola: return False
+        
+        # VERIFICA E INSERIMENTO VERTICALE
+        for riga in range(5):
+            cella = self.griglia[riga][col]
+            if cella == '#':  # ✅ Salta caselle nere
+                continue
+            elif cella != ' ' and cella != parola[riga]:  # ❌ Conflitto incrocio
+                return False
+            else:  # ✅ Riempie celle vuote (non ce ne sono, ma per completezza)
+                self.griglia[riga][col] = parola[riga]
+        
+        self.parole_verticali.append(parola)
+        self.parole_usate.add(parola)
+    
+    return True
                 
                 # Inserisci la parola (solo nelle celle non nere)
                 for riga in range(5):
