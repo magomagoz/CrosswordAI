@@ -123,51 +123,54 @@ class CruciverbaSchemaFisso:
                 pattern.append((k, cella))
         return pattern
 
-def genera(self):
-    try:
-        # 1. Pulizia e caselle nere
-        self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
-        for r, c in self.caselle_nere:
-            self.griglia[r][c] = '#'
-        
-        # 2. ORIZZONTALI ✓ (già corretto)
-        self.parole_orizzontali = []
-        for riga in [0, 2, 4]:
-            pattern = self._pattern_orizzontale(riga, 0, 5)
-            parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
-            if not parola: 
-                return False
+    def genera(self):
+        """Genera il cruciverba completo - VERSIONE CORRETTA"""
+        try:
+            # 1. Inizializza griglia pulita
+            self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
+            self.parole_orizzontali = []
+            self.parole_verticali = []
+            self.parole_usate = set()
             
-            for col in range(5):
-                self.griglia[riga][col] = parola[col]
-            self.parole_orizzontali.append(parola)
-            self.parole_usate.add(parola)
-        
-        # 3. VERTICALI ✓ (CORRETTO E INDENTATO)
-        self.parole_verticali = []
-        for col in [0, 2, 4]:
-            pattern = self._pattern_verticale(0, col, 5)
-            parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
-            if not parola: 
-                return False
+            # 2. Caselle nere
+            for r, c in self.caselle_nere:
+                self.griglia[r][c] = '#'
             
-            # Verifica compatibilità con lettere orizzontali esistenti
-            for riga in range(5):
-                cella = self.griglia[riga][col]
-                if cella == '#':  # Salta caselle nere
-                    continue
-                if cella != ' ' and cella != parola[riga]:  # Conflitto!
+            # 3. ORIZZONTALI (righe 0,2,4)
+            for riga in [0, 2, 4]:
+                pattern = self._pattern_orizzontale(riga, 0, 5)
+                parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
+                if not parola:
                     return False
+                
+                # Inserisci parola
+                for col in range(5):
+                    self.griglia[riga][col] = parola[col]
+                
+                self.parole_orizzontali.append((parola, riga, 0))
+                self.parole_usate.add(parola)
             
-            self.parole_verticali.append(parola)
-            self.parole_usate.add(parola)
-        
-        return True
-        
-    except Exception as e:
-        st.error(f"Errore: {e}")
-        return False
-
+            # 4. VERTICALI (colonne 0,2,4)
+            for col in [0, 2, 4]:
+                pattern = self._pattern_verticale(0, col, 5)
+                parola = self.dizionario._cerca_parola_con_pattern(pattern, self.parole_usate)
+                if not parola:
+                    return False
+                
+                # Verifica compatibilità con orizzontali esistenti
+                for riga in range(5):
+                    cella = self.griglia[riga][col]
+                    if cella != '#' and cella != ' ' and cella != parola[riga]:
+                        return False
+                
+                self.parole_verticali.append((parola, 0, col))
+                self.parole_usate.add(parola)
+            
+            return True
+            
+        except Exception as e:
+            st.error(f"Errore generazione: {e}")
+            return False
 
 # ==================== FUNZIONI ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
