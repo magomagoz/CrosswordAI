@@ -162,35 +162,31 @@ class CruciverbaSchemaFisso:
     
     return True
                 
-            # Inserisci la parola (solo nelle celle non nere)
-            for riga in range(5):
-                if self.griglia[riga][col] == ' ':
-                    self.griglia[riga][col] = parola[riga]
+        # Inserisci la parola (solo nelle celle non nere)
+        for riga in range(5):
+            if self.griglia[riga][col] == ' ':
+                self.griglia[riga][col] = parola[riga]
                 
-            verticali.append(parola)
-            self.parole_usate.add(parola)
+        verticali.append(parola)
+        self.parole_usate.add(parola)
             
-            # Verifica che tutte le celle siano piene
-            for i in range(5):
-                for j in range(5):
-                    if self.griglia[i][j] == ' ':
-                        # Se c'è ancora una cella vuota, prova a riempirla
-                        # con una lettera che renda valide tutte le parole
-                        return False
+        # Verifica che tutte le celle siano piene
+        for i in range(5):
+            for j in range(5):
+                if self.griglia[i][j] == ' ':
+                    # Se c'è ancora una cella vuota, prova a riempirla
+                    # con una lettera che renda valide tutte le parole
+                    return False
             
-            # Salva le parole trovate
-            self.parole_orizzontali = [(orizzontali[0], 0, 0), 
-                                       (orizzontali[1], 2, 0), 
-                                       (orizzontali[2], 4, 0)]
-            self.parole_verticali = [(verticali[0], 0, 0), 
-                                     (verticali[1], 0, 2), 
-                                     (verticali[2], 0, 4)]
+        # Salva le parole trovate
+        self.parole_orizzontali = [(orizzontali[0], 0, 0), (orizzontali[1], 2, 0), (orizzontali[2], 4, 0)]
+        self.parole_verticali = [(verticali[0], 0, 0), (verticali[1], 0, 2), (verticali[2], 0, 4)]
             
-            return True
+        return True
             
-        except Exception as e:
-            st.error(f"Errore: {e}")
-            return False
+    except Exception as e:
+        st.error(f"Errore: {e}")
+        return False
 
 # ==================== FUNZIONI ESPORTAZIONE ====================
 def genera_txt(generatore, includi_lettere=True):
