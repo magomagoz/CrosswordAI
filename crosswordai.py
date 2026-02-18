@@ -5,6 +5,10 @@ from datetime import datetime
 import io
 import re
 
+# --- 1.1. BANNER ---
+st.image("banner.png", use_container_width=True)
+
+
 class DizionarioVerificatoTreccani:
     def __init__(self):
         self.parole_list = []
@@ -220,8 +224,8 @@ def main():
         st.session_state.parole_caricate = False
         st.session_state.generatore = None
     
-    st.title("🧩 Cruciverba 5x5 - TRECCANI VERIFICATO")
-    st.markdown("**⚡ Veloce + 100% Parole italiane certificate**")
+    #st.title("🧩 Cruciverba 5x5 - TRECCANI VERIFICATO")
+    #st.markdown("**⚡ Veloce + 100% Parole italiane certificate**")
     
     col1, col2 = st.columns(2)
     
