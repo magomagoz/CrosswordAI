@@ -1,208 +1,169 @@
 import streamlit as st
+import requests
 import random
 from datetime import datetime
 import io
 
-# ==================== DIZIONARIO ITALIANO ====================
-class DizionarioItaliano:
+# ==================== DIZIONARIO DA API IN TEMPO REALE ====================
+class DizionarioAPI:
     def __init__(self):
-        # Parole italiane vere di 5 lettere
-        self.parole_5 = [
-            "AMORE", "MORTE", "TEMPO", "NOTTE",
-            "FIORE", "ACQUA", "TERRA", "FUOCO",
-            "LIBRO", "GATTO",
-            "PRIMA", "ROSSO", "VERDE",
-            "NUOVO", "DOLCE", "AMARO",
-            "PORTA", "CARTA", "PENNA", "BANCO", "SEDIA","LETTO",
-            "MONTE", "FIUME", "ISOLE", "PONTE",
-            "DANZA", "CANTO",
-            "LIBRO"
-        ]
+        self.cache = {}  # Cache per evitare chiamate ripetute
+    
+    def _chiamata_api(self, parola):
+        """Verifica una parola tramite API gratuita"""
+        try:
+            url = f"https://api.dictionaryapi.dev/api/v2/entries/it/{parola.lower()}"
+            response = requests.get(url, timeout=3)
+            return response.status_code == 200
+        except:
+            return False
+    
+    def _cerca_parole_per_pattern(self, pattern):
+        """
+        Cerca parole che corrispondono a un pattern usando API esterna
+        Nota: In produzione useremmo un servizio dedicato come parole.vocabolario.it
+        """
+        # Simuliamo la ricerca con combinazioni casuali
+        # In un'implementazione reale, qui chiameremmo un'API di ricerca
+        lettere_comuni = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'L', 'M', 
+                         'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'Z']
         
-        self.tutte_parole = set(self.parole_5)
-    
-    def parola_esiste(self, parola):
-        return parola.upper() in self.tutte_parole
-    
-    def get_parole_5(self, exclude=None):
-        parole = self.parole_5.copy()
-        if exclude:
-            parole = [p for p in parole if p not in exclude]
-        return parole
+        # Genera parole casuali e verifica se esistono
+        for _ in range(50):  # Prova 50 combinazioni
+            parola = ''.join(random.choice(lettere_comuni) for _ in range(5))
+            if parola not in self.cache:
+                if self._chiamata_api(parola):
+                    self.cache[parola] = True
+                    return parola
+                else:
+                    self.cache[parola] = False
+        return None
 
-# ==================== GENERATORE CON SCHEMA FISSO CORRETTO ====================
+    def get_parole_per_incrocio(self, orizzontali):
+        """Trova parole verticali che incrociano le orizzontali"""
+        verticali = []
+        
+        for col in [0, 2, 4]:  # Colonne senza caselle nere
+            # Costruisci il pattern delle lettere già fisse
+            pattern = {}
+            if col == 0:
+                pattern = {0: orizzontali[0][0], 2: orizzontali[1][0], 4: orizzontali[2][0]}
+            elif col == 2:
+                pattern = {0: orizzontali[0][2], 2: orizzontali[1][2], 4: orizzontali[2][2]}
+            elif col == 4:
+                pattern = {0: orizzontali[0][4], 2: orizzontali[1][4], 4: orizzontali[2][4]}
+            
+            # Genera parola casuale che rispetta il pattern
+            trovata = False
+            for _ in range(100):  # 100 tentativi
+                # Genera una parola di 5 lettere
+                parola = [''] * 5
+                # Metti le lettere fisse
+                for pos, lett in pattern.items():
+                    parola[pos] = lett
+                # Completa le altre posizioni
+                for i in range(5):
+                    if parola[i] == '':
+                        parola[i] = random.choice('ABCDEFGHILMNOPQRSTUVZ')
+                
+                parola_str = ''.join(parola)
+                
+                # Verifica se esiste
+                if parola_str not in self.cache:
+                    if self._chiamata_api(parola_str):
+                        self.cache[parola_str] = True
+                        verticali.append(parola_str)
+                        trovata = True
+                        break
+                    else:
+                        self.cache[parola_str] = False
+            
+            if not trovata:
+                return None
+        
+        return verticali
+
+# ==================== GENERATORE CON SCHEMA FISSO ====================
 class CruciverbaSchemaFisso:
     def __init__(self, dizionario):
         self.dizionario = dizionario
         self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
         self.parole_orizzontali = []
         self.parole_verticali = []
-        
-        # Coordinate corrette per caselle nere (riga, colonna) con indici 0-4
-        # B2 = riga 1, colonna 1
-        # B4 = riga 1, colonna 3  
-        # D2 = riga 3, colonna 1
-        # D4 = riga 3, colonna 3
         self.caselle_nere = [(1, 1), (1, 3), (3, 1), (3, 3)]
         
     def griglia_html(self, mostra_lettere=True):
         html = '<table style="border-collapse: collapse; font-family: monospace; font-size: 20px; margin: 0 auto;">'
-        
-        # Numeri per definizioni (solo per schema vuoto)
-        numeri = {}
-        if not mostra_lettere:
-            # Orizzontali: righe 0,2,4
-            numeri[(0, 0)] = 1
-            numeri[(2, 0)] = 2
-            numeri[(4, 0)] = 3
-            # Verticali: colonne 0,2,4
-            numeri[(0, 0)] = 1  # Già presente (stessa cella)
-            numeri[(0, 2)] = 4
-            numeri[(0, 4)] = 5
         
         for i in range(5):
             html += '<tr>'
             for j in range(5):
                 if (i, j) in self.caselle_nere:
                     html += '<td style="border: 2px solid black; width: 50px; height: 50px; background: black;">&nbsp;</td>'
-                elif not mostra_lettere and (i, j) in numeri:
-                    html += f'<td style="border: 2px solid black; width: 50px; height: 50px; text-align: center; font-weight: bold; color: #c41e3a;">{numeri[(i, j)]}</td>'
-                elif not mostra_lettere:
-                    html += '<td style="border: 2px solid black; width: 50px; height: 50px;">&nbsp;</td>'
-                else:
+                elif mostra_lettere:
                     html += f'<td style="border: 2px solid black; width: 50px; height: 50px; text-align: center; font-weight: bold;">{self.griglia[i][j]}</td>'
+                else:
+                    html += '<td style="border: 2px solid black; width: 50px; height: 50px;">&nbsp;</td>'
             html += '</tr>'
         html += '</table>'
         return html
 
     def genera(self):
-        """Genera il cruciverba con schema fisso"""
+        """Genera cruciverba usando solo API"""
         try:
-            # Parole orizzontali (righe 0, 2, 4)
-            orizzontali_disponibili = [
-                self.dizionario.get_parole_5(),  # riga 0
-                self.dizionario.get_parole_5(),  # riga 2
-                self.dizionario.get_parole_5()   # riga 4
-            ]
+            # Genera 3 parole orizzontali casuali
+            orizzontali = []
+            for _ in range(3):
+                # Genera parola casuale
+                parola = ''.join(random.choice('ABCDEFGHILMNOPQRSTUVZ') for _ in range(5))
+                # Verifica se esiste
+                if parola not in self.dizionario.cache:
+                    if self.dizionario._chiamata_api(parola):
+                        self.dizionario.cache[parola] = True
+                    else:
+                        self.dizionario.cache[parola] = False
+                        return False
+                elif not self.dizionario.cache[parola]:
+                    return False
+                orizzontali.append(parola)
             
-            # Prova diverse combinazioni
-            for _ in range(100):  # 100 tentativi
-                parole_scelte = []
-                usate = set()
-                
-                # Scegli 3 parole orizzontali diverse
-                for i in range(3):
-                    disponibili = [p for p in orizzontali_disponibili[i] if p not in usate]
-                    if not disponibili:
-                        break
-                    parola = random.choice(disponibili)
-                    parole_scelte.append(parola)
-                    usate.add(parola)
-                
-                if len(parole_scelte) != 3:
-                    continue
-                
-                # Inizializza griglia
-                self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
-                
-                # Posiziona orizzontali
-                for k, parola in enumerate(parole_scelte):
-                    riga = k * 2  # righe 0, 2, 4
-                    for col in range(5):
-                        self.griglia[riga][col] = parola[col]
-                
-                # Inserisci caselle nere
-                for r, c in self.caselle_nere:
-                    self.griglia[r][c] = '#'
-                
-                # Costruisci parole verticali
-                verticali = []
-                for col in [0, 2, 4]:  # colonne senza caselle nere
-                    parola = ""
-                    for riga in range(5):
-                        cella = self.griglia[riga][col]
-                        if cella != ' ' and cella != '#':
-                            parola += cella
-                    
-                    # Verifica che la parola abbia 5 lettere
-                    if len(parola) != 5:
-                        break
-                    verticali.append(parola)
-                
-                if len(verticali) != 3:
-                    continue
-                
-                # Verifica che tutte le verticali siano parole valide
-                tutte_valide = True
-                for parola in verticali:
-                    if not self.dizionario.parola_esiste(parola):
-                        tutte_valide = False
-                        break
-                
-                if tutte_valide:
-                    # Registra le parole
-                    self.parole_orizzontali = [
-                        (parole_scelte[0], 0, 0),
-                        (parole_scelte[1], 2, 0),
-                        (parole_scelte[2], 4, 0)
-                    ]
-                    self.parole_verticali = [
-                        (verticali[0], 0, 0),
-                        (verticali[1], 0, 2),
-                        (verticali[2], 0, 4)
-                    ]
-                    return True
+            # Trova verticali che incrociano
+            verticali = self.dizionario.get_parole_per_incrocio(orizzontali)
+            if not verticali:
+                return False
             
-            return False
+            # Costruisci griglia
+            self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
+            
+            # Inserisci orizzontali
+            for idx, parola in enumerate(orizzontali):
+                riga = idx * 2
+                for col in range(5):
+                    self.griglia[riga][col] = parola[col]
+            
+            # Inserisci verticali
+            for idx, parola in enumerate(verticali):
+                col = idx * 2
+                for riga in range(5):
+                    if (riga, col) not in self.caselle_nere:
+                        self.griglia[riga][col] = parola[riga]
+            
+            # Inserisci caselle nere
+            for r, c in self.caselle_nere:
+                self.griglia[r][c] = '#'
+            
+            self.parole_orizzontali = [(orizzontali[0], 0, 0), (orizzontali[1], 2, 0), (orizzontali[2], 4, 0)]
+            self.parole_verticali = [(verticali[0], 0, 0), (verticali[1], 0, 2), (verticali[2], 0, 4)]
+            
+            return True
             
         except Exception as e:
             st.error(f"Errore: {e}")
             return False
 
-# ==================== FUNZIONI ESPORTAZIONE ====================
-def genera_txt(generatore, includi_lettere=True):
-    output = io.StringIO()
-    
-    if includi_lettere:
-        output.write("CRUCIVERBA 5x5 COMPILATO\n")
-        output.write("="*30 + "\n\n")
-        for riga in generatore.griglia:
-            riga_str = "| "
-            for cella in riga:
-                if cella == '#':
-                    riga_str += "█ | "
-                else:
-                    riga_str += f"{cella} | "
-            output.write(riga_str + "\n")
-    else:
-        output.write("SCHEMA 5x5 VUOTO\n")
-        output.write("="*30 + "\n\n")
-        for i in range(5):
-            riga_str = "| "
-            for j in range(5):
-                if (i, j) in generatore.caselle_nere:
-                    riga_str += "█ | "
-                else:
-                    riga_str += "  | "
-            output.write(riga_str + "\n")
-    
-    # Definizioni
-    output.write("\n\nDEFINIZIONI\n")
-    output.write("="*30 + "\n\n")
-    
-    output.write("ORIZZONTALI:\n")
-    for i, (parola, r, c) in enumerate(generatore.parole_orizzontali, 1):
-        output.write(f"{i}. {parola}\n")
-    
-    output.write("\nVERTICALI:\n")
-    for i, (parola, r, c) in enumerate(generatore.parole_verticali, 4):
-        output.write(f"{i}. {parola}\n")
-    
-    return output.getvalue()
-
 # ==================== MAIN ====================
 def main():
-    st.set_page_config(page_title="Cruciverba 5x5 Schema Fisso", page_icon="🧩", layout="centered")
+    st.set_page_config(page_title="Cruciverba 5x5", page_icon="🧩", layout="centered")
     
     st.markdown("""
         <style>
@@ -218,17 +179,17 @@ def main():
     """, unsafe_allow_html=True)
     
     if 'dizionario' not in st.session_state:
-        st.session_state.dizionario = DizionarioItaliano()
+        st.session_state.dizionario = DizionarioAPI()
     
     if 'generatore' not in st.session_state:
         st.session_state.generatore = None
     
-    st.title("🧩 Cruciverba 5x5 Schema Fisso")
-    st.markdown("### 4 caselle nere - 6 parole da 5 lettere")
-    st.markdown("Posizioni fisse: B2 (1,1), B4 (1,3), D2 (3,1), D4 (3,3)")
+    st.title("🧩 Cruciverba 5x5")
+    st.markdown("### Parole verificate in tempo reale")
+    st.markdown("Posizioni: B2, B4, D2, D4")
     
     if st.button("🎲 GENERA CRUCIVERBA", use_container_width=True):
-        with st.spinner("Generazione cruciverba..."):
+        with st.spinner("Generazione cruciverba con API..."):
             st.session_state.generatore = CruciverbaSchemaFisso(st.session_state.dizionario)
             if st.session_state.generatore.genera():
                 st.success("✅ Cruciverba generato con successo!")
@@ -237,16 +198,8 @@ def main():
     
     if st.session_state.generatore:
         st.markdown("---")
-        
-        tab1, tab2 = st.tabs(["📋 Compilato", "🔢 Schema Vuoto"])
-        
-        with tab1:
-            st.subheader("Cruciverba Compilato")
-            st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
-        
-        with tab2:
-            st.subheader("Schema da Riempire")
-            st.markdown(st.session_state.generatore.griglia_html(False), unsafe_allow_html=True)
+        st.subheader("Cruciverba Compilato")
+        st.markdown(st.session_state.generatore.griglia_html(True), unsafe_allow_html=True)
         
         # Statistiche
         col1, col2, col3, col4 = st.columns(4)
@@ -254,33 +207,6 @@ def main():
         col2.metric("Orizzontali", "3")
         col3.metric("Verticali", "3")
         col4.metric("Caselle Nere", "4/25 (16%)")
-        
-        # Mostra le parole
-        st.markdown("---")
-        st.subheader("📚 Parole generate")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("**Orizzontali:**")
-            for i, (parola, riga, _) in enumerate(st.session_state.generatore.parole_orizzontali, 1):
-                st.write(f"{i}. Riga {riga+1}: **{parola}**")
-        
-        with col2:
-            st.write("**Verticali:**")
-            for i, (parola, _, col) in enumerate(st.session_state.generatore.parole_verticali, 4):
-                st.write(f"{i}. Colonna {col+1}: **{parola}**")
-        
-        # Esportazione
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            txt = genera_txt(st.session_state.generatore, True)
-            st.download_button("📄 TXT Compilato", data=txt,
-                             file_name=f"cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
-        with col2:
-            txt2 = genera_txt(st.session_state.generatore, False)
-            st.download_button("📄 TXT Vuoto", data=txt2,
-                             file_name=f"schema_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
 
 if __name__ == "__main__":
     main()
