@@ -162,13 +162,13 @@ class CruciverbaSchemaFisso:
     
     return True
                 
-                # Inserisci la parola (solo nelle celle non nere)
-                for riga in range(5):
-                    if self.griglia[riga][col] == ' ':
-                        self.griglia[riga][col] = parola[riga]
+            # Inserisci la parola (solo nelle celle non nere)
+            for riga in range(5):
+                if self.griglia[riga][col] == ' ':
+                    self.griglia[riga][col] = parola[riga]
                 
-                verticali.append(parola)
-                self.parole_usate.add(parola)
+            verticali.append(parola)
+            self.parole_usate.add(parola)
             
             # Verifica che tutte le celle siano piene
             for i in range(5):
