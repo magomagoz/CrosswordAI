@@ -100,7 +100,11 @@ class CruciverbaVerificaPost:
                 if (i,j) in self.caselle_nere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px; background: black;">&nbsp;</td>'
                 elif not mostra_lettere and (i,j) in numeri:
-                    html += f'<td style="border: 2px solid black; width: 15px; height: 95px; text-align:left;font-weight:bold;color:#c41e3a;">{numeri[(i,j)]}</td>'
+                    html += f'<td style="border:2px solid black;width:65px;height:65px;position:relative;background:white;">
+                            <span style="position:absolute;top:1px;left:2px;font-size:11px;font-weight:bold;color:#555;line-height:1;">1</span>
+                            &nbsp;
+                            </td>
+
                 elif not mostra_lettere:
                     html += '<td style="border: 2px solid black; width: 65px; height: 65px;">&nbsp;</td>'
                 else:
