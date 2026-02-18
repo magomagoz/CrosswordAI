@@ -317,14 +317,26 @@ def main():
             else:
                 st.info("👆 Clicca 'DEFINIZIONI TRECCANI'")
         
-        # DOWNLOAD
+        # DOWNLOAD PDF ✨
         col1, col2 = st.columns(2)
         with col1:
-            txt = genera_txt(st.session_state.generatore, True)
-            st.download_button("📄 TXT COMPLETO w/ definizioni", txt, f"cruciverba_treccani_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", use_container_width=True)
+            pdf_data = crea_pdf_griglia(st.session_state.generatore, "completo")
+            st.download_button(
+                label="📄 DOWNLOAD PDF COMPLETO",
+                data=pdf_data,
+                file_name=f"cruciverba_completo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
         with col2:
-            txt = genera_txt(st.session_state.generatore, False)
-            st.download_button("📝 TXT SCHEMA", txt, f"schema_cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", use_container_width=True)
+            pdf_schema = crea_pdf_griglia(st.session_state.generatore, "schema")
+            st.download_button(
+                label="📝 DOWNLOAD PDF SCHEMA",
+                data=pdf_schema,
+                file_name=f"schema_cruciverba_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf", 
+                mime="application/pdf",
+                use_container_width=True
+            )
 
 if __name__ == "__main__":
     main()
