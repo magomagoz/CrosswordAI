@@ -144,7 +144,7 @@ class CruciverbaVerificaPost:
             if tentativo % 3 == 0:
                 st.write(f"⚡ Tentativo {tentativo+1}/{max_ritentativi}")
             
-            self.griglia = [[' ' for _ in range(13)] for _ in range(9)]
+            self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
             self.parole_orizzontali = []
             self.parole_verticali = []
             self.parole_usate = set()
