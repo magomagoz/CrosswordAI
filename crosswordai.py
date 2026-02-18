@@ -5,18 +5,20 @@ from datetime import datetime
 import io
 
 # ==================== DIZIONARIO DA API IN TEMPO REALE ====================
-class DizionarioAPI:
+
+class DizionarioAPIDedicata:
     def __init__(self):
-        self.cache = {}  # Cache per evitare chiamate ripetute
+        self.base_url = "https://api.vocabolario.it"  # Esempio
     
-    def _chiamata_api(self, parola):
-        """Verifica una parola tramite API gratuita"""
-        try:
-            url = f"https://api.dictionaryapi.dev/api/v2/entries/it/{parola.lower()}"
-            response = requests.get(url, timeout=3)
-            return response.status_code == 200
-        except:
-            return False
+    def cerca_parole_per_pattern(self, pattern):
+        """Cerca parole che corrispondono a un pattern"""
+        # pattern esempio: "A???A" per parole di 5 lettere che iniziano e finiscono con A
+        response = requests.get(f"{self.base_url}/cerca", params={
+            'pattern': pattern,
+            'lunghezza': 5,
+            'lang': 'it'
+        })
+        return response.json()
     
     def _cerca_parole_per_pattern(self, pattern):
         """
