@@ -84,7 +84,7 @@ class DizionarioVerificatoTreccani:
 class CruciverbaVerificaPost:
     def __init__(self, dizionario):
         self.dizionario = dizionario
-        self.griglia = [[' ' for _ in range(5)] for _ in range(5)]
+        self.griglia = [[' ' for _ in range(13)] for _ in range(9)]
         self.parole_orizzontali = []
         self.parole_verticali = []
         self.parole_usate = set()
