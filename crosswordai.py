@@ -12,7 +12,7 @@ class MotoreCorazzato:
         self.set_parole = set()
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
-        self.storico = []  # <--- CORRETTO: Inizializzato qui
+        self.storico = []
         
         self.emergenza = [
             "CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE", "CITTA",
@@ -45,14 +45,21 @@ class MotoreCorazzato:
         except: pass
         return True
 
-    def inserisci(self, parola, r, c, orientamento):
-        # CORRETTO: Salvataggio unico dello stato prima di modificare
+    def salva_stato(self):
+        """Salva lo stato corrente nello storico per l'UNDO"""
         stato_attuale = {
             'griglia': [r[:] for r in self.griglia],
             'parole_usate': set(self.parole_usate)
         }
         self.storico.append(stato_attuale)
 
+    def inserisci_manuale(self, r, c, valore):
+        """Inserisce un singolo carattere o casella nera cliccando"""
+        self.salva_stato()
+        self.griglia[r][c] = valore
+
+    def inserisci(self, parola, r, c, orientamento):
+        self.salva_stato()
         lung = len(parola)
         for i in range(lung):
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
@@ -140,19 +147,6 @@ class MotoreCorazzato:
                         return True, f"Aggiunta: {p_cand}"
         return False, "Nessun incrocio trovato."
 
-    def render(self):
-        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
-        for r in range(ROWS):
-            html += '<tr>'
-            for c in range(COLS):
-                v = self.griglia[r][c]
-                bg = "#000" if v == "#" else "#fff"
-                color = "#fff" if v == "#" else "#000"
-                disp = v if v not in ["#", " "] else ""
-                html += f'<td style="width:38px;height:38px;border:1px solid #ddd;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;">{disp}</td>'
-            html += '</tr>'
-        return html + "</table></div>"
-
 def main():
     st.set_page_config(page_title="Cruciverba Pro", layout="centered")
     st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
@@ -168,9 +162,18 @@ def main():
             st.session_state.caricato = True
             st.rerun()
     else:
+        # --- SEZIONE CONTROLLI MANUALI ---
+        with st.expander("🛠️ Strumenti Manuali", expanded=True):
+            c1, c2 = st.columns(2)
+            with c1:
+                tipo_inserimento = st.radio("Cosa vuoi inserire?", ["Casella Nera ⚫", "Lettera ✍️"], horizontal=True)
+            with c2:
+                lettera = st.selectbox("Scegli lettera:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"), index=1)
+
+        # --- PULSANTI AZIONE ---
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("➕ AGGIUNGI", use_container_width=True):
+            if st.button("➕ AUTO-AGGIUNGI", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_mossa()
                 st.session_state.log = msg
                 st.rerun()
@@ -187,8 +190,39 @@ def main():
                 st.session_state.log = "Reset."
                 st.rerun()
 
-        st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
+        # --- GRIGLIA INTERATTIVA ---
+        # Usiamo CSS per rendere i bottoni quadrati e simili a un cruciverba
+        st.markdown("""
+            <style>
+            div.stButton > button {
+                width: 100%;
+                height: 45px;
+                padding: 0px;
+                font-weight: bold;
+                border: 1px solid #ccc;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        for r in range(ROWS):
+            cols = st.columns(COLS)
+            for c in range(COLS):
+                val = st.session_state.m.griglia[r][c]
+                # Stile: Nero per '#', Bianco per lettere/vuoto
+                btn_type = "primary" if val == "#" else "secondary"
+                label = " " if val in ["#", " "] else val
+                
+                if cols[c].button(label, key=f"cell_{r}_{c}", type=btn_type):
+                    if tipo_inserimento == "Casella Nera ⚫":
+                        nuovo = "#" if val != "#" else " "
+                        st.session_state.m.inserisci_manuale(r, c, nuovo)
+                    else:
+                        st.session_state.m.inserisci_manuale(r, c, lettera.strip() if lettera.strip() else " ")
+                    st.rerun()
+
         st.info(f"Log: {st.session_state.log}")
+        if st.session_state.m.parole_usate:
+            st.write(f"**Parole inserite:** {', '.join(st.session_state.m.parole_usate)}")
 
 if __name__ == "__main__":
     main()
