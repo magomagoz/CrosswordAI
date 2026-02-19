@@ -151,6 +151,54 @@ def main():
     st.set_page_config(page_title="Cruciverba Pro", layout="centered")
     st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
 
+    # --- CSS AVANZATO PER GRIGLIA COMPATTA ---
+    st.markdown("""
+        <style>
+        /* Rimuove lo spazio tra le colonne di Streamlit */
+        [data-testid="column"] {
+            width: unset !important;
+            flex: 0 1 auto !important;
+            padding: 0px !important;
+            margin: -1px !important; /* Sovrappone leggermente i bordi */
+        }
+        
+        div.stButton > button {
+            width: 42px !important; /* Dimensione fissa quadrata */
+            height: 42px !important;
+            border-radius: 0px !important; /* Toglie l'effetto ovale */
+            border: 1px solid #444 !important;
+            padding: 0px !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            line-height: 42px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Colore per le caselle nere (Primary) */
+        div.stButton > button[kind="primary"] {
+            background-color: #000 !important;
+            color: #000 !important;
+            border: 1px solid #000 !important;
+        }
+
+        /* Colore per le caselle bianche (Secondary) */
+        div.stButton > button[kind="secondary"] {
+            background-color: #fff !important;
+            color: #000 !important;
+        }
+        
+        /* Contenitore della griglia per centrarla */
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     if 'm' not in st.session_state:
         st.session_state.m = MotoreCorazzato()
         st.session_state.caricato = False
@@ -162,67 +210,51 @@ def main():
             st.session_state.caricato = True
             st.rerun()
     else:
-        # --- SEZIONE CONTROLLI MANUALI ---
+        # --- STRUMENTI ---
         with st.expander("🛠️ Strumenti Manuali", expanded=True):
             c1, c2 = st.columns(2)
             with c1:
-                tipo_inserimento = st.radio("Cosa vuoi inserire?", ["Casella Nera ⚫", "Lettera ✍️"], horizontal=True)
+                tipo_inserimento = st.radio("Strumento:", ["Lettera ✍️", "Casella Nera ⚫"], horizontal=True)
             with c2:
-                lettera = st.selectbox("Scegli lettera:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"), index=1)
+                lettera = st.selectbox("Lettera:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"), index=1)
 
-        # --- PULSANTI AZIONE ---
-        col1, col2, col3 = st.columns(3)
-        with col1:
+        # --- AZIONI ---
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
             if st.button("➕ AUTO-AGGIUNGI", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_mossa()
                 st.session_state.log = msg
                 st.rerun()
-        with col2:
+        with col_b:
             if st.button("⬅️ UNDO", use_container_width=True):
-                if st.session_state.m.annulla():
-                    st.session_state.log = "Annullato."
-                else:
-                    st.warning("Vuoto.")
+                st.session_state.m.annulla()
                 st.rerun()
-        with col3:
+        with col_c:
             if st.button("🔄 RESET", use_container_width=True):
                 st.session_state.m.reset_griglia()
-                st.session_state.log = "Reset."
                 st.rerun()
 
-        # --- GRIGLIA INTERATTIVA ---
-        # Usiamo CSS per rendere i bottoni quadrati e simili a un cruciverba
-        st.markdown("""
-            <style>
-            div.stButton > button {
-                width: 100%;
-                height: 45px;
-                padding: 0px;
-                font-weight: bold;
-                border: 1px solid #ccc;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
+        # --- GRIGLIA ---
+        st.markdown('<div class="grid-container">', unsafe_allow_html=True)
         for r in range(ROWS):
-            cols = st.columns(COLS)
+            # Creiamo le colonne con larghezza fissa per evitare l'effetto elastico
+            cols = st.columns([1]*COLS)
             for c in range(COLS):
                 val = st.session_state.m.griglia[r][c]
-                # Stile: Nero per '#', Bianco per lettere/vuoto
                 btn_type = "primary" if val == "#" else "secondary"
-                label = " " if val in ["#", " "] else val
+                # Se è nero non mostriamo testo, se è spazio mostriamo uno spazio vuoto
+                label = " " if val == "#" else val
                 
-                if cols[c].button(label, key=f"cell_{r}_{c}", type=btn_type):
+                if cols[c].button(label, key=f"c_{r}_{c}", type=btn_type):
                     if tipo_inserimento == "Casella Nera ⚫":
                         nuovo = "#" if val != "#" else " "
                         st.session_state.m.inserisci_manuale(r, c, nuovo)
                     else:
                         st.session_state.m.inserisci_manuale(r, c, lettera.strip() if lettera.strip() else " ")
                     st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
         st.info(f"Log: {st.session_state.log}")
-        if st.session_state.m.parole_usate:
-            st.write(f"**Parole inserite:** {', '.join(st.session_state.m.parole_usate)}")
 
 if __name__ == "__main__":
     main()
