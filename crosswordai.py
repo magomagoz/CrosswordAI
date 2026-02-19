@@ -8,33 +8,29 @@ COLS = 9
 
 class MotoreCorazzato:
     def __init__(self):
-        # Inizializziamo con liste per ogni lunghezza da 2 a 10
         self.dizionario = {i: [] for i in range(2, 11)}
         self.set_parole = set()
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
+        self.storico = []  # <--- CORRETTO: Inizializzato qui
         
-        # VOCABOLARIO DI EMERGENZA (Sempre presente)
         self.emergenza = [
             "CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE", "CITTA",
-            "UOMO", "DONNA", "VITA", "CUORE", "FIUME", "NOTTE", "ERBA", "MELA", "PORTA", "VINO",
-            "ARTE", "TAVOLO", "SEDIA", "PIANO", "CARTA", "MONDO", "CORPO", "MANO", "OCCHIO", "VOCE",
-            "AMICO", "TEMPO", "MODO", "PAROLA", "PADRE", "MADRE", "FIGLIO", "STORIA", "SCUOLA", "LAVORO"
+            "UOMO", "DONNA", "VITA", "CUORE", "FIUME", "NOTTE", "ERBA", "MELA", "PORTA", "VINO"
         ]
 
     def reset_griglia(self):
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
+        self.storico = []
 
     def carica_parole(self):
-        # Carichiamo prima l'emergenza per essere sicuri
         for p in self.emergenza:
             p = p.upper()
             if p not in self.set_parole:
                 self.dizionario[len(p)].append(p)
                 self.set_parole.add(p)
         
-        # Tentativo download esterno
         url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
         try:
             res = requests.get(url, timeout=3)
@@ -46,20 +42,37 @@ class MotoreCorazzato:
                         if p not in self.set_parole:
                             self.dizionario[len(p)].append(p)
                             self.set_parole.add(p)
-                return True
-        except:
-            pass
-        return True # Ritorna True comunque perché abbiamo l'emergenza
-    
+        except: pass
+        return True
+
     def inserisci(self, parola, r, c, orientamento):
-        # Salva una copia profonda della griglia e delle parole usate nello storico
+        # CORRETTO: Salvataggio unico dello stato prima di modificare
         stato_attuale = {
             'griglia': [r[:] for r in self.griglia],
             'parole_usate': set(self.parole_usate)
         }
         self.storico.append(stato_attuale)
+
+        lung = len(parola)
+        for i in range(lung):
+            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
+            self.griglia[rr][cc] = parola[i]
         
-        # ... (procedi con l'inserimento esistente)
+        if orientamento == 'O':
+            if c - 1 >= 0 and self.griglia[r][c-1] == ' ': self.griglia[r][c-1] = '#'
+            if c + lung < COLS and self.griglia[r][c+lung] == ' ': self.griglia[r][c+lung] = '#'
+        else:
+            if r - 1 >= 0 and self.griglia[r-1][c] == ' ': self.griglia[r-1][c] = '#'
+            if r + lung < ROWS and self.griglia[r+lung][c] == ' ': self.griglia[r+lung][c] = '#'
+        self.parole_usate.add(parola)
+
+    def annulla(self):
+        if self.storico:
+            ultimo_stato = self.storico.pop()
+            self.griglia = ultimo_stato['griglia']
+            self.parole_usate = ultimo_stato['parole_usate']
+            return True
+        return False
 
     def estrai_segmento(self, griglia, r, c, orient):
         res = ""
@@ -80,15 +93,10 @@ class MotoreCorazzato:
     def verifica_legalita(self, r, c, parola, orientamento):
         temp_griglia = [row[:] for row in self.griglia]
         lung = len(parola)
-        
         for i in range(lung):
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
-            # 1. BLOCCA SOVRASCRITTURA CON LETTERE DIVERSE
-            if temp_griglia[rr][cc].isalpha() and temp_griglia[rr][cc] != parola[i]:
-                return False
-            # 2. BLOCCA SOVRASCRITTURA DI CASELLE NERE
-            if temp_griglia[rr][cc] == '#':
-                return False
+            if temp_griglia[rr][cc].isalpha() and temp_griglia[rr][cc] != parola[i]: return False
+            if temp_griglia[rr][cc] == '#': return False
             temp_griglia[rr][cc] = parola[i]
 
         check_orient = 'O' if orientamento == 'V' else 'V'
@@ -96,27 +104,10 @@ class MotoreCorazzato:
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
             seg = self.estrai_segmento(temp_griglia, rr, cc, check_orient)
             if len(seg) > 1 and ' ' not in seg:
-                if seg not in self.set_parole:
-                    return False
+                if seg not in self.set_parole: return False
         return True
 
-    def inserisci(self, parola, r, c, orientamento):
-        lung = len(parola)
-        for i in range(lung):
-            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
-            self.griglia[rr][cc] = parola[i]
-        
-        # Caselle nere solo ai bordi e solo se la cella è vuota
-        if orientamento == 'O':
-            if c - 1 >= 0 and self.griglia[r][c-1] == ' ': self.griglia[r][c-1] = '#'
-            if c + lung < COLS and self.griglia[r][c+lung] == ' ': self.griglia[r][c+lung] = '#'
-        else:
-            if r - 1 >= 0 and self.griglia[r-1][c] == ' ': self.griglia[r-1][c] = '#'
-            if r + lung < ROWS and self.griglia[r+lung][c] == ' ': self.griglia[r+lung][c] = '#'
-        self.parole_usate.add(parola)
-
     def aggiungi_mossa(self):
-        # --- PRIMA PAROLA ---
         if not self.parole_usate:
             for lung in [7, 6, 5]:
                 if self.dizionario[lung]:
@@ -125,27 +116,14 @@ class MotoreCorazzato:
                     return True, f"Inizio con: {p}"
             return False, "Dizionario vuoto!"
 
-    def annulla(self):
-        if self.storico:
-            ultimo_stato = self.storico.pop()
-            self.griglia = ultimo_stato['griglia']
-            self.parole_usate = ultimo_stato['parole_usate']
-            return True
-        return False
-            
-        # --- INCROCI ---
         coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
         random.shuffle(coords)
-        
-        # Proviamo lunghezze da 6 a 3
         for r, c, o in coords:
             for l in [6, 5, 4, 3]:
                 if not self.dizionario[l]: continue
-                
                 patt = ""
                 ha_incrocio = False
                 spazio_libero = True
-                
                 for i in range(l):
                     rr, cc = (r+i, c) if o == 'V' else (r, c+i)
                     if rr >= ROWS or cc >= COLS or self.griglia[rr][cc] == '#':
@@ -153,19 +131,14 @@ class MotoreCorazzato:
                     char = self.griglia[rr][cc]
                     if char.isalpha(): ha_incrocio = True
                     patt += char
-                
                 if not spazio_libero or not ha_incrocio: continue
-
-                # Filtro candidati (non usati e compatibili col pattern)
                 candidati = [p for p in self.dizionario[l] if p not in self.parole_usate and all(patt[j] == ' ' or patt[j] == p[j] for j in range(l))]
                 random.shuffle(candidati)
-                
                 for p_cand in candidati[:20]:
                     if self.verifica_legalita(r, c, p_cand, o):
                         self.inserisci(p_cand, r, c, o)
                         return True, f"Aggiunta: {p_cand}"
-
-        return False, "Nessun incrocio valido trovato. Prova a resettare."
+        return False, "Nessun incrocio trovato."
 
     def render(self):
         html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
@@ -176,13 +149,13 @@ class MotoreCorazzato:
                 bg = "#000" if v == "#" else "#fff"
                 color = "#fff" if v == "#" else "#000"
                 disp = v if v not in ["#", " "] else ""
-                html += f'<td style="width:38px;height:38px;border:1px solid #ddd;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;font-family:sans-serif;">{disp}</td>'
+                html += f'<td style="width:38px;height:38px;border:1px solid #ddd;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;">{disp}</td>'
             html += '</tr>'
         return html + "</table></div>"
 
 def main():
     st.set_page_config(page_title="Cruciverba Pro", layout="centered")
-    st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9 (Stabile)</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
 
     if 'm' not in st.session_state:
         st.session_state.m = MotoreCorazzato()
@@ -195,31 +168,27 @@ def main():
             st.session_state.caricato = True
             st.rerun()
     else:
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("➕ AGGIUNGI PAROLA", use_container_width=True):
+            if st.button("➕ AGGIUNGI", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_mossa()
                 st.session_state.log = msg
                 st.rerun()
         with col2:
+            if st.button("⬅️ UNDO", use_container_width=True):
+                if st.session_state.m.annulla():
+                    st.session_state.log = "Annullato."
+                else:
+                    st.warning("Vuoto.")
+                st.rerun()
+        with col3:
             if st.button("🔄 RESET", use_container_width=True):
                 st.session_state.m.reset_griglia()
-                st.session_state.log = "Griglia pulita."
+                st.session_state.log = "Reset."
                 st.rerun()
 
-    # Sotto il tasto RESET o PROSSIMA MOSSA
-    if st.button("⬅️ UNDO (ANNULLA)", use_container_width=True):
-        if st.session_state.m.annulla():
-            st.session_state.log = "Ultima azione annullata."
-            st.rerun()
-        else:
-            st.warning("Nessuna azione da annullare.")
-
-
-        
         st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
         st.info(f"Log: {st.session_state.log}")
-        st.write(f"Parole usate: {', '.join(list(st.session_state.m.parole_usate))}")
 
 if __name__ == "__main__":
     main()
