@@ -164,6 +164,24 @@ class MotoreCorazzato:
             html += '</tr>'
         return html + "</table></div>"
 
+        # --- GRIGLIA INTERATTIVA ---
+        #for r in range(ROWS):
+            #cols = st.columns([1]*COLS)
+            #for c in range(COLS):
+                #val = st.session_state.m.griglia[r][c]
+                #is_black = (val == "#")
+                # Kind 'primary' per caselle nere (CSS le colora di nero), 'secondary' per bianche
+                #if cols[c].button(val if not is_black else " ", key=f"btn_{r}_{c}", type="primary" if is_black else "secondary"):
+                    #if tool == "Casella Nera ⚫":
+                        #nuovo = "#" if val != "#" else " "
+                        #st.session_state.m.inserisci_manuale(r, c, nuovo)
+                    #else:
+                        #st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
+                    #st.rerun()
+
+        #st.info(f"Log: {st.session_state.log}")
+
+
 def main():
     st.set_page_config(page_title="Cruciverba Pro", layout="centered")
     st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
@@ -205,23 +223,6 @@ def main():
                 st.rerun()
 
         st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
-        st.info(f"Log: {st.session_state.log}")
-
-        # --- GRIGLIA INTERATTIVA ---
-        for r in range(ROWS):
-            cols = st.columns([1]*COLS)
-            for c in range(COLS):
-                val = st.session_state.m.griglia[r][c]
-                is_black = (val == "#")
-                # Kind 'primary' per caselle nere (CSS le colora di nero), 'secondary' per bianche
-                if cols[c].button(val if not is_black else " ", key=f"btn_{r}_{c}", type="primary" if is_black else "secondary"):
-                    if tool == "Casella Nera ⚫":
-                        nuovo = "#" if val != "#" else " "
-                        st.session_state.m.inserisci_manuale(r, c, nuovo)
-                    else:
-                        st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
-                    st.rerun()
-
         st.info(f"Log: {st.session_state.log}")
 
 if __name__ == "__main__":
