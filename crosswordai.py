@@ -126,13 +126,13 @@ class MotoreCorazzato:
             return False, "Dizionario vuoto!"
 
     def annulla(self):
-    if self.storico:
-        ultimo_stato = self.storico.pop()
-        self.griglia = ultimo_stato['griglia']
-        self.parole_usate = ultimo_stato['parole_usate']
-        return True
-    return False
-        
+        if self.storico:
+            ultimo_stato = self.storico.pop()
+            self.griglia = ultimo_stato['griglia']
+            self.parole_usate = ultimo_stato['parole_usate']
+            return True
+        return False
+            
         # --- INCROCI ---
         coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
         random.shuffle(coords)
