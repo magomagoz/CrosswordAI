@@ -50,6 +50,16 @@ class MotoreCorazzato:
         except:
             pass
         return True # Ritorna True comunque perché abbiamo l'emergenza
+    
+    def inserisci(self, parola, r, c, orientamento):
+        # Salva una copia profonda della griglia e delle parole usate nello storico
+        stato_attuale = {
+            'griglia': [r[:] for r in self.griglia],
+            'parole_usate': set(self.parole_usate)
+        }
+        self.storico.append(stato_attuale)
+        
+        # ... (procedi con l'inserimento esistente)
 
     def estrai_segmento(self, griglia, r, c, orient):
         res = ""
@@ -115,6 +125,14 @@ class MotoreCorazzato:
                     return True, f"Inizio con: {p}"
             return False, "Dizionario vuoto!"
 
+    def annulla(self):
+    if self.storico:
+        ultimo_stato = self.storico.pop()
+        self.griglia = ultimo_stato['griglia']
+        self.parole_usate = ultimo_stato['parole_usate']
+        return True
+    return False
+        
         # --- INCROCI ---
         coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
         random.shuffle(coords)
@@ -188,6 +206,16 @@ def main():
                 st.session_state.m.reset_griglia()
                 st.session_state.log = "Griglia pulita."
                 st.rerun()
+
+    # Sotto il tasto RESET o PROSSIMA MOSSA
+    if st.button("⬅️ UNDO (ANNULLA)", use_container_width=True):
+        if st.session_state.m.annulla():
+            st.session_state.log = "Ultima azione annullata."
+            st.rerun()
+        else:
+            st.warning("Nessuna azione da annullare.")
+
+
         
         st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
         st.info(f"Log: {st.session_state.log}")
