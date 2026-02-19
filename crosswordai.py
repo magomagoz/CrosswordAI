@@ -167,20 +167,6 @@ class MotoreCorazzato:
 def main():
     st.set_page_config(page_title="Cruciverba Pro", layout="centered")
     st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
-
-    # --- CSS PER GRIGLIA UNITA E QUADRATA ---
-    st.markdown("""
-        <style>
-        [data-testid="column"] { width: fit-content !important; flex: unset !important; padding: 0px !important; margin: 0px !important; }
-        div.stButton > button {
-            width: 42px !important; height: 42px !important;
-            border-radius: 0px !important; margin: 0px !important; padding: 0px !important;
-            border: 0.5px solid #444 !important; font-size: 18px !important; font-weight: bold !important;
-        }
-        div.stButton > button[kind="primary"] { background-color: #000 !important; color: #000 !important; border-color: #000 !important; }
-        div.stButton > button[kind="secondary"] { background-color: #fff !important; color: #333 !important; }
-        </style>
-    """, unsafe_allow_html=True)
     
     if 'm' not in st.session_state:
         st.session_state.m = MotoreCorazzato()
