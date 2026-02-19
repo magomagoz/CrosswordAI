@@ -13,8 +13,11 @@ class MotoreCorazzato:
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
         self.storico = []
-        # Fallback minimo se il web non dovesse rispondere
-        self.emergenza = ["CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO"]
+        
+        self.emergenza = [
+            "CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE", "CITTA",
+            "UOMO", "DONNA", "VITA", "CUORE", "FIUME", "NOTTE", "ERBA", "MELA", "PORTA", "VINO"
+        ]
 
     def reset_griglia(self):
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
@@ -22,10 +25,17 @@ class MotoreCorazzato:
         self.storico = []
 
     def carica_parole(self):
-        """Scarica il dizionario direttamente dal Web"""
+        # Carica parole emergenza
+        for p in self.emergenza:
+            p = p.upper()
+            if p not in self.set_parole:
+                self.dizionario[len(p)].append(p)
+                self.set_parole.add(p)
+        
+        # Carica parole da Web
         url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
         try:
-            res = requests.get(url, timeout=5)
+            res = requests.get(url, timeout=3)
             if res.status_code == 200:
                 linee = res.text.splitlines()
                 for l in linee:
@@ -34,16 +44,15 @@ class MotoreCorazzato:
                         if p not in self.set_parole:
                             self.dizionario[len(p)].append(p)
                             self.set_parole.add(p)
-                return True, f"Dizionario caricato: {len(self.set_parole)} parole scaricate."
-        except Exception as e:
-            # Fallback manuale se il link fallisce
-            for p in self.emergenza:
-                self.dizionario[len(p)].append(p)
-                self.set_parole.add(p)
-            return False, f"Errore connessione: caricato solo dizionario di emergenza. ({e})"
+        except: pass
+        return True
 
     def salva_stato(self):
-        self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
+        stato_attuale = {
+            'griglia': [r[:] for r in self.griglia],
+            'parole_usate': set(self.parole_usate)
+        }
+        self.storico.append(stato_attuale)
 
     def inserisci_manuale(self, r, c, valore):
         self.salva_stato()
@@ -56,7 +65,6 @@ class MotoreCorazzato:
             rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
             self.griglia[rr][cc] = parola[i]
         
-        # Posizionamento automatico caselle nere protettive
         if orientamento == 'O':
             if c - 1 >= 0 and self.griglia[r][c-1] == ' ': self.griglia[r][c-1] = '#'
             if c + lung < COLS and self.griglia[r][c+lung] == ' ': self.griglia[r][c+lung] = '#'
@@ -67,9 +75,9 @@ class MotoreCorazzato:
 
     def annulla(self):
         if self.storico:
-            ultimo = self.storico.pop()
-            self.griglia = ultimo['griglia']
-            self.parole_usate = ultimo['parole_usate']
+            ultimo_stato = self.storico.pop()
+            self.griglia = ultimo_stato['griglia']
+            self.parole_usate = ultimo_stato['parole_usate']
             return True
         return False
 
@@ -113,8 +121,8 @@ class MotoreCorazzato:
                 if self.dizionario[lung]:
                     p = random.choice(self.dizionario[lung])
                     self.inserisci(p, 6, (COLS - lung) // 2, 'O')
-                    return True, f"Inizio Web: {p}"
-            return False, "Dizionario vuoto"
+                    return True, f"Inizio con: {p}"
+            return False, "Dizionario vuoto!"
 
         coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
         random.shuffle(coords)
@@ -137,19 +145,20 @@ class MotoreCorazzato:
                 for p_cand in candidati[:20]:
                     if self.verifica_legalita(r, c, p_cand, o):
                         self.inserisci(p_cand, r, c, o)
-                        return True, f"Trovata online: {p_cand}"
-        return False, "Nessuna soluzione trovata."
+                        return True, f"Aggiunta: {p_cand}"
+        return False, "Nessun incrocio trovato."
 
 def main():
-    st.set_page_config(page_title="Cruciverba Web Pro", layout="centered")
+    st.set_page_config(page_title="Cruciverba Pro", layout="centered")
     
+    # --- CSS PER GRIGLIA UNITA E QUADRATA ---
     st.markdown("""
         <style>
         [data-testid="column"] { width: fit-content !important; flex: unset !important; padding: 0px !important; margin: 0px !important; }
         div.stButton > button {
-            width: 40px !important; height: 40px !important;
+            width: 42px !important; height: 42px !important;
             border-radius: 0px !important; margin: 0px !important; padding: 0px !important;
-            border: 0.5px solid #ccc !important; font-size: 18px !important; font-weight: bold !important;
+            border: 0.5px solid #444 !important; font-size: 18px !important; font-weight: bold !important;
         }
         div.stButton > button[kind="primary"] { background-color: #000 !important; color: #000 !important; border-color: #000 !important; }
         div.stButton > button[kind="secondary"] { background-color: #fff !important; color: #333 !important; }
@@ -159,47 +168,53 @@ def main():
     if 'm' not in st.session_state:
         st.session_state.m = MotoreCorazzato()
         st.session_state.caricato = False
-        st.session_state.log = "Scarica il dizionario dal Web per iniziare."
+        st.session_state.log = "Carica il dizionario."
 
     if not st.session_state.caricato:
-        if st.button("🌐 SCARICA DIZIONARIO WEB", use_container_width=True):
-            successo, msg = st.session_state.m.carica_parole()
-            st.session_state.caricato = successo
-            st.session_state.log = msg
+        if st.button("🌐 CARICA DIZIONARIO WEB", use_container_width=True):
+            st.session_state.m.carica_parole()
+            st.session_state.caricato = True
             st.rerun()
     else:
+        # --- STRUMENTI ---
         with st.expander("🛠️ Strumenti Manuali", expanded=True):
             c1, c2 = st.columns(2)
-            with c1: tool = st.radio("Azione:", ["Lettera ✍️", "Nera ⚫"], horizontal=True)
-            with c2: char = st.selectbox("Lettera:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+            with c1: tool = st.radio("Azione:", ["Lettera ✍️", "Casella Nera ⚫"], horizontal=True)
+            with c2: char = st.selectbox("Scegli Lettera:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
 
+        # --- PULSANTI AZIONE ---
         ca, cb, cc = st.columns(3)
-        with ca: 
-            if st.button("➕ AUTO-AGGIUNGI", use_container_width=True): 
+        with ca:
+            if st.button("➕ AUTO-AGGIUNGI", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_mossa()
                 st.session_state.log = msg
                 st.rerun()
-        with cb: 
-            if st.button("⬅️ UNDO", use_container_width=True): 
+        with cb:
+            if st.button("⬅️ UNDO", use_container_width=True):
                 st.session_state.m.annulla()
                 st.rerun()
-        with cc: 
-            if st.button("🔄 RESET", use_container_width=True): 
+        with cc:
+            if st.button("🔄 RESET", use_container_width=True):
                 st.session_state.m.reset_griglia()
                 st.rerun()
 
         st.write("---")
+        
+        # --- GRIGLIA INTERATTIVA ---
         for r in range(ROWS):
             cols = st.columns([1]*COLS)
             for c in range(COLS):
                 val = st.session_state.m.griglia[r][c]
                 is_black = (val == "#")
-                if cols[c].button(" " if is_black else val, key=f"{r}_{c}", type="primary" if is_black else "secondary"):
-                    if tool == "Nera ⚫":
-                        st.session_state.m.inserisci_manuale(r, c, "#" if val != "#" else " ")
+                # Kind 'primary' per caselle nere (CSS le colora di nero), 'secondary' per bianche
+                if cols[c].button(val if not is_black else " ", key=f"btn_{r}_{c}", type="primary" if is_black else "secondary"):
+                    if tool == "Casella Nera ⚫":
+                        nuovo = "#" if val != "#" else " "
+                        st.session_state.m.inserisci_manuale(r, c, nuovo)
                     else:
                         st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
                     st.rerun()
+
         st.info(f"Log: {st.session_state.log}")
 
 if __name__ == "__main__":
