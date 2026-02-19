@@ -45,6 +45,17 @@ class MotoreCorazzato:
         except: pass
         return True
 
+    def salva_stato(self):
+        stato_attuale = {
+            'griglia': [r[:] for r in self.griglia],
+            'parole_usate': set(self.parole_usate)
+        }
+        self.storico.append(stato_attuale)
+
+    def inserisci_manuale(self, r, c, valore):
+        self.salva_stato()
+        self.griglia[r][c] = valore
+    
     def inserisci(self, parola, r, c, orientamento):
         # CORRETTO: Salvataggio unico dello stato prima di modificare
         stato_attuale = {
@@ -168,26 +179,49 @@ def main():
             st.session_state.caricato = True
             st.rerun()
     else:
+        # --- STRUMENTI ---
+        with st.expander("🛠️ Strumenti Manuali", expanded=True):
+            c1, c2 = st.columns(2)
+            with c1: tool = st.radio("Azione:", ["Lettera ✍️", "Casella Nera ⚫"], horizontal=True)
+            with c2: char = st.selectbox("Scegli Lettera:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("➕ AGGIUNGI", use_container_width=True):
+            if st.button("➕ AGGIUNGI PAROLA", use_container_width=True):
                 _, msg = st.session_state.m.aggiungi_mossa()
                 st.session_state.log = msg
                 st.rerun()
         with col2:
-            if st.button("⬅️ UNDO", use_container_width=True):
+            if st.button("⬅️ ANNULLA ULTIMO", use_container_width=True):
                 if st.session_state.m.annulla():
                     st.session_state.log = "Annullato."
                 else:
                     st.warning("Vuoto.")
                 st.rerun()
         with col3:
-            if st.button("🔄 RESET", use_container_width=True):
+            if st.button("🔄 RESET TOTALE", use_container_width=True):
                 st.session_state.m.reset_griglia()
                 st.session_state.log = "Reset."
                 st.rerun()
 
         st.markdown(st.session_state.m.render(), unsafe_allow_html=True)
+        st.info(f"Log: {st.session_state.log}")
+
+        # --- GRIGLIA INTERATTIVA ---
+        for r in range(ROWS):
+            cols = st.columns([1]*COLS)
+            for c in range(COLS):
+                val = st.session_state.m.griglia[r][c]
+                is_black = (val == "#")
+                # Kind 'primary' per caselle nere (CSS le colora di nero), 'secondary' per bianche
+                if cols[c].button(val if not is_black else " ", key=f"btn_{r}_{c}", type="primary" if is_black else "secondary"):
+                    if tool == "Casella Nera ⚫":
+                        nuovo = "#" if val != "#" else " "
+                        st.session_state.m.inserisci_manuale(r, c, nuovo)
+                    else:
+                        st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
+                    st.rerun()
+
         st.info(f"Log: {st.session_state.log}")
 
 if __name__ == "__main__":
