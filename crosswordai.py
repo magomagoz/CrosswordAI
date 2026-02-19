@@ -184,7 +184,8 @@ class MotoreCorazzato:
 
 def main():
     st.set_page_config(page_title="Cruciverba Pro", layout="centered")
-    st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
+    st.image("banner.png", use_column_width=True, caption="Crossword AI")
+    #st.markdown("<h2 style='text-align: center;'>🧩 Builder Cruciverba 13x9</h2>", unsafe_allow_html=True)
     
     if 'm' not in st.session_state:
         st.session_state.m = MotoreCorazzato()
