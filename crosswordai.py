@@ -7,7 +7,7 @@ import re
 ROWS = 13
 COLS = 9
 
-class MotoreInterattivo:
+class MotoreArchitetto:
     def __init__(self):
         self.dizionario = {i: [] for i in range(2, 14)}
         self.set_parole = set()
@@ -16,19 +16,22 @@ class MotoreInterattivo:
         self.storico = []
         
     def carica_dizionario(self):
+        # Utilizzo del repository ufficiale per parole italiane
         url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
         try:
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 linee = res.text.splitlines()
+                count = 0
                 for l in linee:
                     p = l.strip().upper()
                     if p.isalpha() and 2 <= len(p) <= 12:
                         self.set_parole.add(p)
                         self.dizionario[len(p)].append(p)
-                return True
+                        count += 1
+                return count
         except: pass
-        return False
+        return 0
 
     def salva_stato(self):
         self.storico.append({
@@ -52,31 +55,32 @@ class MotoreInterattivo:
             self.griglia[rr][cc] = parola[i]
         self.parole_usate.add(parola)
 
+    def toggle_nera(self, r, c):
+        self.salva_stato()
+        if self.griglia[r][c] == '#':
+            self.griglia[r][c] = ' '
+        else:
+            self.griglia[r][c] = '#'
+
     def verifica_legalita(self, r, c, parola, orient):
         L = len(parola)
         if orient == 'O' and c + L > COLS: return False
         if orient == 'V' and r + L > ROWS: return False
         
-        # Controllo sovrapposizione e collisioni
         ha_incrocio = False
         for i in range(L):
             rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
-            cella_attuale = self.griglia[rr][cc]
-            if cella_attuale == '#': return False
-            if cella_attuale.isalpha():
-                if cella_attuale != parola[i]: return False
+            cella = self.griglia[rr][cc]
+            if cella == '#': return False # Non può sovrascrivere una nera
+            if cella.isalpha():
+                if cella != parola[i]: return False
                 ha_incrocio = True
         
-        # Se la griglia non è vuota, pretendiamo un incrocio (opzionale)
-        if len(self.parole_usate) > 0 and not ha_incrocio:
-            return False
-            
-        return True
+        return True if (len(self.parole_usate) == 0 or ha_incrocio) else False
 
-    def trova_tutti_incastri(self, parola):
-        parola = parola.upper()
-        L = len(parola)
+    def trova_incastri(self, parola):
         validi = []
+        if not parola: return validi
         for r in range(ROWS):
             for c in range(COLS):
                 for o in ['O', 'V']:
@@ -85,63 +89,85 @@ class MotoreInterattivo:
         return validi
 
 def main():
-    st.set_page_config(page_title="Crossword Architect", layout="wide")
+    st.set_page_config(page_title="Editor Cruciverba 13x9", layout="wide")
     
     if 'm' not in st.session_state:
-        st.session_state.m = MotoreInterattivo()
-        st.session_state.diz_pronto = False
+        st.session_state.m = MotoreArchitetto()
+        st.session_state.caricato = False
 
-    st.title("🧩 Architect 13x9: Incastro Manuale")
+    st.title("🧩 Editor Cruciverba Professionale 13x9")
 
+    # --- SIDEBAR ---
     with st.sidebar:
-        if not st.session_state.diz_pronto:
-            if st.button("📚 Carica Dizionario"):
-                st.session_state.m.carica_dizionario()
-                st.session_state.diz_pronto = True
+        st.header("⚙️ Pannello Controllo")
+        
+        if not st.session_state.caricato:
+            if st.button("📚 CARICA DIZIONARIO"):
+                n = st.session_state.m.carica_dizionario()
+                if n > 0:
+                    st.session_state.caricato = True
+                    st.success(f"Dizionario caricato: {n} parole!")
+                else:
+                    st.error("Errore nel download.")
+        else:
+            st.success("✅ Dizionario Pronto")
+
+        st.divider()
+        
+        # Modalità di interazione
+        modo = st.radio("Cosa vuoi fare?", ["Inserisci Parole ✍️", "Piazza Caselle Nere ⚫"])
+        
+        st.divider()
+        
+        if modo == "Inserisci Parole ✍️":
+            parola_input = st.text_input("Parola da incastrare:").upper()
+            if parola_input:
+                opzioni = st.session_state.m.trova_incastri(parola_input)
+                if opzioni:
+                    st.info(f"Trovate {len(opzioni)} posizioni.")
+                    scelta = st.selectbox("Scegli dove metterla:", range(len(opzioni)), 
+                                        format_func=lambda x: f"{opzioni[x]['o']} - Riga {opzioni[x]['r']+1}, Col {opzioni[x]['c']+1}")
+                    if st.button("🚀 INSERISCI"):
+                        p = opzioni[scelta]
+                        st.session_state.m.inserisci_parola(parola_input, p['r'], p['c'], p['o'])
+                        st.rerun()
+                else:
+                    st.warning("Nessun incastro possibile per questa parola.")
+        
+        st.divider()
+        if st.button("⬅️ ANNULLA ULTIMA AZIONE"):
+            if st.session_state.m.annulla():
                 st.rerun()
-        
-        st.divider()
-        st.subheader("✍️ Inserimento Manuale")
-        input_parola = st.text_input("Scrivi la parola:").upper()
-        
-        if input_parola:
-            opzioni = st.session_state.m.trova_tutti_incastri(input_parola)
-            if opzioni:
-                st.success(f"Trovati {len(opzioni)} incastri possibili!")
-                scelta = st.selectbox("Scegli posizione:", range(len(opzioni)), 
-                                    format_func=lambda x: f"{opzioni[x]['o']} a Riga {opzioni[x]['r']+1}, Col {opzioni[x]['c']+1}")
-                if st.button("✅ Inserisci in Griglia"):
-                    pos = opzioni[scelta]
-                    st.session_state.m.inserisci_parola(input_parola, pos['r'], pos['c'], pos['o'])
-                    st.rerun()
+
+    # --- AREA GRIGLIA ---
+    st.markdown("### Clicca sulle caselle per modificarle" if modo == "Piazza Caselle Nere ⚫" else "### Visualizzazione Schema")
+    
+    for r in range(ROWS):
+        cols = st.columns([1]*COLS)
+        for c in range(COLS):
+            valore = st.session_state.m.griglia[r][c]
+            
+            # Colore e stile del bottone basato sul contenuto
+            if valore == '#':
+                btn_type = "primary" # Bottone scuro
+                label = " "
+            elif valore.isalpha():
+                btn_type = "secondary"
+                label = valore
             else:
-                st.error("Nessun incastro legale possibile.")
+                btn_type = "secondary"
+                label = " "
 
-        st.divider()
-        if st.button("⬅️ Annulla"):
-            st.session_state.m.annulla()
-            st.rerun()
+            # Il click funziona solo in modalità "Caselle Nere"
+            if cols[c].button(label, key=f"cell_{r}_{c}", use_container_width=True, type=btn_type):
+                if modo == "Piazza Caselle Nere ⚫":
+                    st.session_state.m.toggle_nera(r, c)
+                    st.rerun()
+                else:
+                    st.toast("Passa alla modalità 'Caselle Nere' per modificare i neri!", icon="⚠️")
 
-    # Visualizzazione Griglia
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        # Generiamo la visualizzazione HTML
-        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
-        for r in range(ROWS):
-            html += '<tr>'
-            for c in range(COLS):
-                v = st.session_state.m.griglia[r][c]
-                bg = "#000" if v == "#" else "#fff"
-                color = "#000"
-                html += f'<td style="width:40px;height:40px;border:1px solid #ccc;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:20px;">{v if v != " " else "&nbsp;"}</td>'
-            html += '</tr>'
-        html += "</table></div>"
-        st.markdown(html, unsafe_allow_html=True)
-        
-    with col2:
-        st.write("**Parole inserite:**")
-        for p in st.session_state.m.parole_usate:
-            st.write(f"- {p}")
+    st.divider()
+    st.write(f"**Parole in griglia ({len(st.session_state.m.parole_usate)}):** " + ", ".join(st.session_state.m.parole_usate))
 
 if __name__ == "__main__":
     main()
