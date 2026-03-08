@@ -14,11 +14,6 @@ class MotoreCorazzato:
         self.parole_usate = set()
         self.storico = []  # <--- CORRETTO: Inizializzato qui
         
-        self.emergenza = [
-            "CASA", "PANE", "SOLE", "MARE", "LIBRO", "GATTO", "MONTE", "STRADA", "AMORE", "CITTA",
-            "UOMO", "DONNA", "VITA", "CUORE", "FIUME", "NOTTE", "ERBA", "MELA", "PORTA", "VINO"
-        ]
-
     def reset_griglia(self):
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
@@ -165,19 +160,19 @@ class MotoreCorazzato:
         return html + "</table></div>"
 
         # --- GRIGLIA INTERATTIVA ---
-        #for r in range(ROWS):
-            #cols = st.columns([1]*COLS)
-            #for c in range(COLS):
-                #val = st.session_state.m.griglia[r][c]
-                #is_black = (val == "#")
-                # Kind 'primary' per caselle nere (CSS le colora di nero), 'secondary' per bianche
-                #if cols[c].button(val if not is_black else " ", key=f"btn_{r}_{c}", type="primary" if is_black else "secondary"):
-                    #if tool == "Casella Nera ⚫":
-                        #nuovo = "#" if val != "#" else " "
-                        #st.session_state.m.inserisci_manuale(r, c, nuovo)
-                    #else:
-                        #st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
-                    #st.rerun()
+        for r in range(ROWS):
+            cols = st.columns([1]*COLS)
+            for c in range(COLS):
+                val = st.session_state.m.griglia[r][c]
+                is_black = (val == "#")
+                 Kind 'primary' per caselle nere (CSS le colora di nero), 'secondary' per bianche
+                if cols[c].button(val if not is_black else " ", key=f"btn_{r}_{c}", type="primary" if is_black else "secondary"):
+                    if tool == "Casella Nera ⚫":
+                        nuovo = "#" if val != "#" else " "
+                        st.session_state.m.inserisci_manuale(r, c, nuovo)
+                    else:
+                        st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
+                    st.rerun()
 
         #st.info(f"Log: {st.session_state.log}")
 
