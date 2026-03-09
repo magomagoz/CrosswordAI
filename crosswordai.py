@@ -87,7 +87,7 @@ def main():
         st.session_state.m = MotoreArchitetto(13, 9)
     
     with st.sidebar:
-        st.title("DASHBOARD")
+        st.title("⚙️ Pannello di controllo")
         
         st.header("📐 Crea la griglia")
         new_rows = st.slider("Righe", 3, 25, st.session_state.m.rows)
