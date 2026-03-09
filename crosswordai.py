@@ -140,25 +140,42 @@ def main():
 
     
     # Visualizzazione Griglia
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        # Generiamo la visualizzazione HTML
-        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
-        for r in range(ROWS):
-            html += '<tr>'
-            for c in range(COLS):
-                v = st.session_state.m.griglia[r][c]
-                bg = "#000" if v == "#" else "#fff"
-                color = "#000"
-                html += f'<td style="width:40px;height:40px;border:1px solid #ccc;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:20px;">{v if v != " " else "&nbsp;"}</td>'
-            html += '</tr>'
-        html += "</table></div>"
-        st.markdown(html, unsafe_allow_html=True)
-        
-    with col2:
-        st.write("**Parole inserite:**")
-        for p in st.session_state.m.parole_usate:
-            st.write(f"- {p}")
+    # Generiamo la visualizzazione HTML
+    html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
+    for r in range(ROWS):
+        html += '<tr>'
+        for c in range(COLS):
+            v = st.session_state.m.griglia[r][c]
+            bg = "#000" if v == "#" else "#fff"
+            color = "#000"
+            html += f'<td style="width:40px;height:40px;border:1px solid #ccc;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:20px;">{v if v != " " else "&nbsp;"}</td>'
+        html += '</tr>'
+    html += "</table></div>"
+    st.markdown(html, unsafe_allow_html=True)
+    
+    #st.divider()
+    # Creiamo due colonne sotto la griglia per dividere le liste
+    col1, col2 = st.columns(2)
+    
+    with col1: 
+        st.subheader("Orizzontali")
+        # Filtriamo solo le parole con orientamento 'O'
+        orizzontali = [item for item in st.session_state.m.parole_usate if item['o'] == 'O']
+        if orizzontali:
+            for item in orizzontali:
+                st.write(f"R{item['r']} C{item['c']}: **{item['p']}**")
+        else:
+            st.write("Nessuna parola.")
+
+    with col2: 
+        st.subheader("Verticali")
+        # Filtriamo solo le parole con orientamento 'V'
+        verticali = [item for item in st.session_state.m.parole_usate if item['o'] == 'V']
+        if verticali:
+            for item in verticali:
+                st.write(f"R{item['r']} C{item['c']}: **{item['p']}**")
+        else:
+            st.write("Nessuna parola.")
 
 if __name__ == "__main__":
     main()
