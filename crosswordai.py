@@ -104,7 +104,7 @@ def main():
             
         st.divider()
         st.subheader("✍️ Inserimento Parola")
-        p_in = st.text_input("Parola:").upper().strip()
+        p_in = st.text_input("Parola:", key="input_parola").upper().strip()
         anteprima_data = None
         if p_in:
             risultato = st.session_state.m.trova_incastri(p_in)
@@ -112,8 +112,9 @@ def main():
                 idx = st.selectbox("Posizioni:", range(len(risultato)), format_func=lambda x: f"{risultato[x]['o']} - R{risultato[x]['r']+1}, C{risultato[x]['c']+1}")
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
                 if st.button("🚀 CONFERMA"):
-                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o']); 
-                    anteprima_data = None # <--- AGGIUNTA: forza la rimozione del colore blu
+                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
+                    # Pulisci l'input per resettare la logica dell'anteprima
+                    st.session_state.input_parola = "" 
                     st.rerun()
 
             else: st.error("Nessun incastro.")
