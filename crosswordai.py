@@ -125,6 +125,9 @@ def main():
                     st.rerun()
             else: st.error("Nessun incastro.")
 
+        if st.button("⬅️ ANNULLA"):
+            if st.session_state.m.annulla(): st.rerun()
+        
     st.divider()
     st.title("🧩 Griglia Cruciverba")
     st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
