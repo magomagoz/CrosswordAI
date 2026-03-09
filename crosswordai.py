@@ -95,7 +95,6 @@ def main():
         st.session_state.m = MotoreInterattivo()
         st.session_state.diz_pronto = False
 
-    st.image("banner.png")
     #st.title("🧩 Architect 13x9: Incastro Manuale")
 
     with st.sidebar:
@@ -138,6 +137,7 @@ def main():
             st.session_state.m.toggle_nera(r_nera, c_nera)
             st.rerun()
 
+    st.image("banner.png")
     
     # Visualizzazione Griglia
     # Generiamo la visualizzazione HTML
