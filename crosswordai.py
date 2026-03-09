@@ -75,6 +75,29 @@ class MotoreArchitetto:
             html += '</tr>'
         return html + '</table>'
 
+    def calcola_numeri(self):
+        numeri = {}
+        contatore = 1
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if self.griglia[r][c] == '#':
+                    continue
+                
+                # È inizio orizzontale se: cella bianca, non è bordo sx (o ha una nera a sx) 
+                # e ha una cella bianca a destra.
+                inizio_o = (c == 0 or self.griglia[r][c-1] == '#') and \
+                           (c + 1 < self.cols and self.griglia[r][c+1] != '#')
+                
+                # È inizio verticale se: cella bianca, non è bordo superiore (o ha una nera sopra)
+                # e ha una cella bianca sotto.
+                inizio_v = (r == 0 or self.griglia[r-1][c] == '#') and \
+                           (r + 1 < self.rows and self.griglia[r+1][c] != '#')
+                
+                if inizio_o or inizio_v:
+                    numeri[(r, c)] = contatore
+                    contatore += 1
+        return numeri
+
 def main():
     st.set_page_config(page_title="Editor Blindato", layout="wide")
     
