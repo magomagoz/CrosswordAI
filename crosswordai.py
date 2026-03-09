@@ -82,7 +82,22 @@ def main():
     
     with st.sidebar:
         st.title("⚙️ Pannello di controllo")
-        # [Logica griglia e caselle nere invariata...]
+
+        st.header("📐 Crea la griglia")
+        new_rows = st.slider("Righe", 3, 25, st.session_state.m.rows)
+        new_cols = st.slider("Colonne", 3, 25, st.session_state.m.cols)
+        if st.session_state.m.rows != new_rows or st.session_state.m.cols != new_cols:
+            st.session_state.m = MotoreArchitetto(new_rows, new_cols); st.rerun()
+
+        st.divider()
+        st.subheader("⬛ Caselle Nere")
+        c1, c2 = st.columns(2)
+        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
+        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
+        if st.button("Metti/Togli Nera"):
+            st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
+
+        st.divider()
         
         st.subheader("✍️ Inserimento Parola")
         p_in = st.text_input("Parola (libera):", key="input_parola").upper().strip()
