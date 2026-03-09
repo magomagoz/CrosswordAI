@@ -96,13 +96,25 @@ def main():
         st.session_state.diz_pronto = False
 
     
-    with st.sidebar:
-        if not st.session_state.diz_pronto:
-            if st.button("📚 Carica Dizionario"):
-                st.session_state.m.carica_dizionario()
-                st.session_state.diz_pronto = True
-                st.rerun()
+        st.header("📐 Seleziona Schema")
         
+        # Dizionario con i formati predefiniti
+        formati = {
+            "Incroci obbligati": (13, 9),
+            "Ricerca di parole crociate": (12, 14),
+            "Parole crociate senza schema": (12, 22),
+            "Parole crociate bifrontali": (12, 18)
+        }
+        
+        # Scelta tramite Selectbox
+        scelta = st.selectbox("Scegli formato:", list(formati.keys()))
+        rows, cols = formati[scelta]
+        
+        # Bottone per applicare il cambio schema
+        if st.button("Applica Schema"):
+            st.session_state.m = MotoreArchitetto(rows, cols)
+            st.rerun()
+                    
         st.divider()
         st.subheader("✏️ Inserimento Manuale")
         input_parola = st.text_input("Scrivi la parola:").upper()
