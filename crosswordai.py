@@ -95,8 +95,7 @@ def main():
         st.session_state.m = MotoreInterattivo()
         st.session_state.diz_pronto = False
 
-    #st.title("🧩 Architect 13x9: Incastro Manuale")
-
+    
     with st.sidebar:
         if not st.session_state.diz_pronto:
             if st.button("📚 Carica Dizionario"):
@@ -138,7 +137,8 @@ def main():
             st.rerun()
 
     st.image("banner.png")
-    
+    st.header("🧩 Incroci obbligati (13x9)")
+
     # Visualizzazione Griglia
     # Generiamo la visualizzazione HTML
     html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
