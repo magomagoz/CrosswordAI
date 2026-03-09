@@ -2,44 +2,42 @@ import streamlit as st
 import requests
 import re
 
-# --- CONFIGURAZIONE ---
-ROWS = 13
-COLS = 9
-
 class MotoreArchitetto:
-    def __init__(self):
-        # Inizializziamo tutto vuoto
+    def __init__(self, rows, cols):
+        self.rows = rows
+        self.cols = cols
         self.dizionario = {} 
         self.set_parole = set()
-        self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
+        self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
         self.parole_usate = set()
         self.storico = []
         
     def carica_dizionario_massivo(self):
-        urls = [
-            "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt",
-            "https://raw.githubusercontent.com/dofoster87/italian-wordlist/master/italian-words.txt"
-        ]
-        
-        count = 0
-        for url in urls:
-            try:
-                # Aumentiamo il timeout a 20 secondi per i 600.000 lemmi
-                res = requests.get(url, timeout=20)
-                if res.status_code == 200:
-                    linee = res.text.splitlines()
-                    for l in linee:
-                        p = l.strip().upper()
-                        if p.isalpha() and 2 <= len(p) <= 12:
-                            self.set_parole.add(p)
-                            L = len(p)
-                            if L not in self.dizionario: self.dizionario[L] = []
-                            self.dizionario[L].append(p)
-                            count += 1
-                    return count # Esci al primo successo
-            except:
-                continue
-        return count
+        url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        try:
+            res = requests.get(url, headers=headers, timeout=30)
+            if res.status_code == 200:
+                testo = res.content.decode('utf-8')
+                linee = testo.splitlines()
+                temp_set = set()
+                for l in linee:
+                    p = l.strip().upper()
+                    # Accetta parole proporzionate alla griglia massima
+                    if p.isalpha() and 2 <= len(p) <= max(self.rows, self.cols):
+                        temp_set.add(p)
+                
+                for p in temp_set:
+                    self.set_parole.add(p)
+                    L = len(p)
+                    if L not in self.dizionario: self.dizionario[L] = []
+                    self.dizionario[L].append(p)
+                return len(self.set_parole)
+        except Exception as e:
+            st.error(f"Errore: {str(e)}")
+        return 0
 
     def salva_stato(self):
         self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
@@ -108,18 +106,30 @@ class MotoreArchitetto:
         return html + '</table>'
 
 def main():
-    st.set_page_config(page_title="Editor Professionale 13x9", layout="wide")
-    if 'm' not in st.session_state:
-        st.session_state.m = MotoreArchitetto()
-        st.session_state.caricato = False
-
+    st.set_page_config(page_title="Custom Crossword Editor", layout="wide")
+    
+    # 1. SCELTA GRANDEZZA (In alto nella sidebar)
     with st.sidebar:
-        st.title("🛠️ Pannello")
-        if st.button("📚 SCARICA DIZIONARIO", use_container_width=True):
-            n = st.session_state.m.carica_dizionario_massivo()
-            st.session_state.caricato = True
-            st.success(f"Dizionario pronto: {n} lemmi!")
+        st.title("📐 Configurazione")
+        new_rows = st.slider("Righe", 3, 25, 13)
+        new_cols = st.slider("Colonne", 3, 25, 9)
+        
+        # Inizializzazione o Reset se cambiano le dimensioni
+        if 'm' not in st.session_state or st.session_state.m.rows != new_rows or st.session_state.m.cols != new_cols:
+            st.session_state.m = MotoreArchitetto(new_rows, new_cols)
+            st.session_state.caricato = False
+            st.toast(f"Griglia impostata a {new_rows}x{new_cols}")
 
+        st.divider()
+        
+        if not st.session_state.caricato:
+            if st.button("📚 SCARICA DIZIONARIO", use_container_width=True):
+                with st.spinner("Scaricamento lemmi..."):
+                    n = st.session_state.m.carica_dizionario_massivo()
+                    if n > 0:
+                        st.session_state.caricato = True
+                        st.success(f"Dizionario pronto: {n} lemmi!")
+        
         st.divider()
         st.subheader("⚫ Caselle Nere")
         c1, c2 = st.columns(2)
