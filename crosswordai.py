@@ -85,14 +85,26 @@ class MotoreArchitetto:
 
 def main():
     st.set_page_config(page_title="Editor Professionale", layout="wide")
+    st.image("banner.png")
+    
     if 'm' not in st.session_state: st.session_state.m = MotoreArchitetto(13, 9)
     
     with st.sidebar:
         st.title("⚙️ Pannello di controllo")
+
+        st.header("📐 Crea la griglia")
         new_rows = st.slider("Righe", 3, 25, st.session_state.m.rows)
         new_cols = st.slider("Colonne", 3, 25, st.session_state.m.cols)
         if st.session_state.m.rows != new_rows or st.session_state.m.cols != new_cols:
             st.session_state.m = MotoreArchitetto(new_rows, new_cols); st.rerun()
+
+        st.divider()
+        st.subheader("⚫ Caselle Nere")
+        c1, c2 = st.columns(2)
+        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
+        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
+        if st.button("Metti/Togli Nera"):
+            st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
 
         st.divider()
         st.subheader("✍️ Inserimento Parola")
@@ -113,6 +125,7 @@ def main():
                     st.rerun()
             else: st.error("Nessun incastro.")
 
+    st.divider()
     st.title("🧩 Griglia Cruciverba")
     st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
     
