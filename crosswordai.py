@@ -113,7 +113,7 @@ def main():
                     st.rerun()
             else: st.error("Nessun incastro possibile.")
 
-    st,image("banner.png")
+    st.image("banner.png")
     st.title("🧩 Griglia Cruciverba")
     st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
 
