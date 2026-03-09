@@ -101,9 +101,7 @@ def main():
         if st.button("Applica Schema"):
             st.session_state.m = MotoreArchitetto(rows, cols)
             st.rerun()
-            
-        st.divider()
-
+        
         st.divider()
         st.subheader("⬛ Caselle Nere")
         c1, c2 = st.columns(2)
