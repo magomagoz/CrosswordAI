@@ -109,7 +109,10 @@ def main():
                 idx = st.selectbox("Posizioni:", range(len(risultato)), format_func=lambda x: f"{risultato[x]['o']} - R{risultato[x]['r']+1}, C{risultato[x]['c']+1}")
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
                 if st.button("🚀 CONFERMA"):
-                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o']); st.rerun()
+                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o']); 
+                    anteprima_data = None # <--- AGGIUNTA: forza la rimozione del colore blu
+                    st.rerun()
+
             else: st.error("Nessun incastro.")
 
         if st.button("⬅️ ANNULLA"):
