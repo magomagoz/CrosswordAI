@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import sqlite3
 
 class MotoreArchitetto:
     def __init__(self, rows, cols):
@@ -41,6 +42,14 @@ class MotoreArchitetto:
         for i in range(len(p)):
             rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
             self.griglia[rr][cc] = p[i]
+
+    def verifica_parola(self, parola):
+        conn = sqlite3.connect("dizionario.db")
+        c = conn.cursor()
+        c.execute("SELECT 1 FROM parole WHERE testo = ?", (parola.upper(),))
+        esiste = c.fetchone() is not None
+        conn.close()
+        return esiste
 
     def trova_incastri(self, parola):
         validi = []
