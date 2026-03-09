@@ -106,7 +106,7 @@ def main():
                 st.rerun()
         
         st.divider()
-        st.subheader("✍️ Inserimento Manuale")
+        st.subheader("✏️ Inserimento Manuale")
         input_parola = st.text_input("Scrivi la parola:").upper()
         
         if input_parola:
