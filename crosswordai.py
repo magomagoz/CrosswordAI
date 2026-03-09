@@ -11,20 +11,11 @@ class MotoreArchitetto:
         self.rows = rows  # <--- CORRETTO: usa il parametro dinamico
         self.cols = cols  # <--- CORRETTO: usa il parametro dinamico
 
-        self.dizionario = {} 
         self.set_parole = set()
         self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
         self.parole_usate = set()
         self.storico = []
 
-class MotoreArchitetto:
-    def __init__(self, rows, cols):
-        self.rows = rows
-        self.cols = cols
-        self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
-        self.parole_usate = [] 
-        self.storico = []
-        
     def salva_stato(self):
         self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
 
@@ -87,15 +78,6 @@ def main():
     # Inizializzazione sicura
     if 'm' not in st.session_state:
         st.session_state.m = MotoreArchitetto(13, 9)
-    
-    # Sidebar configurazione
-    with st.sidebar:
-        if st.button("📚 SCARICA DIZIONARIO"):
-            st.session_state.dizionario = scarica_dizionario_sicuro()
-            st.success("Dizionario pronto!")
-            
-    # Visualizzazione
-    st.markdown(st.session_state.m.render_html(), unsafe_allow_html=True)
     
     # Liste parole sotto la griglia
     col1, col2 = st.columns(2)
