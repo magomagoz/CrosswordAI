@@ -114,14 +114,6 @@ def main():
             st.toast(f"Griglia impostata a {new_rows}x{new_cols}")
 
         st.divider()
-        
-        st.title("🛠️ Pannello")
-        if st.button("📚 SCARICA DIZIONARIO", use_container_width=True):
-            n = st.session_state.m.carica_dizionario_massivo()
-            st.session_state.caricato = True
-            st.success(f"Dizionario pronto: {n} lemmi!")
-
-        st.divider()
         st.subheader("⚫ Caselle Nere")
         c1, c2 = st.columns(2)
         r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
