@@ -101,15 +101,17 @@ class MotoreArchitetto:
                 if temp_grid[rr][cc] == ' ': 
                     temp_grid[rr][cc] = f'<span style="color:#007bff; font-weight:normal;">{p[i]}</span>'
         
-        for r in range(ROWS):
-            html += '<tr>'
-            for c in range(COLS):
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if (o == 'O' and c + L > self.cols) or (o == 'V' and r + L > self.rows): continue
                 val = temp_grid[r][c]
                 bg = "black" if val == "#" else "white"
                 display = val if (val != " " and val != "#") else "&nbsp;"
                 html += f'<td style="border: 1px solid #444; width: 42px; height: 42px; text-align: center; font-weight: bold; font-family: Arial; background: {bg}; color: black; font-size: 22px;">{display}</td>'
             html += '</tr>'
         return html + '</table>'
+
+
 
 def main():
     st.set_page_config(page_title="Editor Professionale 13x9", layout="wide")
@@ -139,8 +141,8 @@ def main():
         st.divider()
         st.subheader("⚫ Caselle Nere")
         c1, c2 = st.columns(2)
-        r_n = c1.number_input("Riga", 1, ROWS, 1) - 1
-        c_n = c2.number_input("Col", 1, COLS, 1) - 1
+        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
+        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
         if st.button("Metti/Togli Nera", use_container_width=True):
             st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
             
