@@ -99,7 +99,7 @@ def main():
             st.session_state.m = MotoreArchitetto(new_rows, new_cols); st.rerun()
 
         st.divider()
-        st.subheader("⚫ Caselle Nere")
+        st.subheader("⬛ Caselle Nere")
         c1, c2 = st.columns(2)
         r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
         c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
