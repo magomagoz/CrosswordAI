@@ -80,13 +80,16 @@ class MotoreArchitetto:
 
 def main():
     st.set_page_config(page_title="Editor Professionale", layout="wide")
+    st.image("banner.png")
     
     # Gestione stato
     if 'm' not in st.session_state:
         st.session_state.m = MotoreArchitetto(13, 9)
     
     with st.sidebar:
-        st.title("📐 Configurazione")
+        st.title("DASHBOARD")
+        
+        st.header("📐 Crea la griglia")
         new_rows = st.slider("Righe", 3, 25, st.session_state.m.rows)
         new_cols = st.slider("Colonne", 3, 25, st.session_state.m.cols)
         
