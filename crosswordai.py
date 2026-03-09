@@ -116,8 +116,20 @@ def main():
     if 'm' not in st.session_state:
         st.session_state.m = MotoreArchitetto()
         st.session_state.caricato = False
-
+        
     with st.sidebar:
+        st.title("📐 Configurazione")
+        new_rows = st.slider("Righe", 3, 25, 13)
+        new_cols = st.slider("Colonne", 3, 25, 9)
+        
+        # Inizializzazione o Reset se cambiano le dimensioni
+        if 'm' not in st.session_state or st.session_state.m.rows != new_rows or st.session_state.m.cols != new_cols:
+            st.session_state.m = MotoreArchitetto(new_rows, new_cols)
+            st.session_state.caricato = False
+            st.toast(f"Griglia impostata a {new_rows}x{new_cols}")
+
+        st.divider()
+        
         st.title("🛠️ Pannello")
         if st.button("📚 SCARICA DIZIONARIO", use_container_width=True):
             n = st.session_state.m.carica_dizionario_massivo()
