@@ -7,39 +7,42 @@ ROWS = 13
 COLS = 9
 
 class MotoreArchitetto:
-    def __init__(self):
-        # Inizializziamo tutto vuoto
+    def __init__(self, rows, cols):
+        self.rows = ROWS
+        self.cols = COLS
         self.dizionario = {} 
         self.set_parole = set()
-        self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
+        self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
         self.parole_usate = set()
         self.storico = []
         
     def carica_dizionario_massivo(self):
-        urls = [
-            "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt",
-            "https://raw.githubusercontent.com/dofoster87/italian-wordlist/master/italian-words.txt"
-        ]
-        
-        count = 0
-        for url in urls:
-            try:
-                # Aumentiamo il timeout a 20 secondi per i 600.000 lemmi
-                res = requests.get(url, timeout=20)
-                if res.status_code == 200:
-                    linee = res.text.splitlines()
-                    for l in linee:
-                        p = l.strip().upper()
-                        if p.isalpha() and 2 <= len(p) <= 12:
-                            self.set_parole.add(p)
-                            L = len(p)
-                            if L not in self.dizionario: self.dizionario[L] = []
-                            self.dizionario[L].append(p)
-                            count += 1
-                    return count # Esci al primo successo
-            except:
-                continue
-        return count
+        url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        try:
+            res = requests.get(url, headers=headers, timeout=30)
+            if res.status_code == 200:
+                testo = res.content.decode('utf-8')
+                linee = testo.splitlines()
+                temp_set = set()
+                for l in linee:
+                    p = l.strip().upper()
+                    # Accetta parole proporzionate alla griglia massima
+                    if p.isalpha() and 2 <= len(p) <= max(self.rows, self.cols):
+                        temp_set.add(p)
+                
+                for p in temp_set:
+                    self.set_parole.add(p)
+                    L = len(p)
+                    if L not in self.dizionario: self.dizionario[L] = []
+                    self.dizionario[L].append(p)
+                return len(self.set_parole)
+        except Exception as e:
+            st.error(f"Errore: {str(e)}")
+        return 0
+
 
 
     def salva_stato(self):
