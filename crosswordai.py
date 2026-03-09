@@ -40,7 +40,6 @@ class MotoreInterattivo:
         self.salva_stato()
         self.griglia[r][c] = '#' if self.griglia[r][c] != '#' else ' '
 
-    
     def annulla(self):
         if self.storico:
             stato = self.storico.pop()
@@ -122,7 +121,7 @@ def main():
             else:
                 st.error("Nessun incastro legale possibile.")
 
-        st.divider()
+        #st.divider()
         if st.button("⬅️ Annulla"):
             st.session_state.m.annulla()
             st.rerun()
