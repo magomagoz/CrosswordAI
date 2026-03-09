@@ -3,145 +3,223 @@ import requests
 import random
 import re
 
-# --- Classi core (Dizionario e Logica Griglia) ---
-class AssistenteCruciverba:
+# --- CONFIGURAZIONE ---
+ROWS = 13
+COLS = 9
+
+class MotoreCorazzato:
     def __init__(self):
-        if 'parole_per_L' not in st.session_state:
-            st.session_state.parole_per_L = {}
-        self.ROWS = 13
-        self.COLS = 9
-
-    def carica_dizionario(self):
-        tutte_parole = set()
-        progress = st.progress(0)
-        # Carichiamo un set di pagine per avere varietà di lunghezze
-        for p in range(1, 12):
-            try:
-                resp = requests.get(f"https://www.listediparole.it/parole-italiane-pagina{p}.htm", timeout=5)
-                parole = re.findall(r'\b[A-Z]{2,13}\b', resp.text)
-                tutte_parole.update(parole)
-            except: continue
-            progress.progress(p/11)
+        self.dizionario = {i: [] for i in range(2, 11)}
+        self.set_parole = set()
+        self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
+        self.parole_usate = set()
+        self.storico = []
+        # Aggiunta lista emergenza mancante
+        self.emergenza = ["CASA", "SOLE", "MARE", "GATTO", "AMORE", "STORIA", "ESTATE"]
         
-        diz = {}
-        for parola in tutte_parole:
-            L = len(parola)
-            if L not in diz: diz[L] = []
-            diz[L].append(parola)
-        st.session_state.parole_per_L = diz
-        progress.empty()
-        return len(tutte_parole)
+    def reset_griglia(self):
+        self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
+        self.parole_usate = set()
+        self.storico = []
 
-    def trova_segmenti(self, griglia):
-        """Trova tutti gli spazi bianchi (orizzontali) disponibili"""
-        segmenti = []
-        for r in range(13):
-            riga_str = "".join(griglia[r])
-            for m in re.finditer(r'[^#]+', riga_str):
-                if len(m.group()) >= 2:
-                    segmenti.append((r, m.start(), len(m.group())))
-        return segmenti
+    def carica_parole(self):
+        # Carica emergenza
+        for p in self.emergenza:
+            p = p.upper()
+            if p not in self.set_parole:
+                self.dizionario[len(p)].append(p)
+                self.set_parole.add(p)
+        
+        # Download dizionario esterno
+        url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
+        try:
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                linee = res.text.splitlines()
+                for l in linee:
+                    p = l.strip().upper()
+                    if p.isalpha() and 2 <= len(p) <= 10:
+                        if p not in self.set_parole:
+                            self.dizionario[len(p)].append(p)
+                            self.set_parole.add(p)
+        except: pass
+        return True
 
-def render_griglia(griglia):
-    """Renderizza la griglia con stile compatto"""
-    html = '<table style="border-collapse: collapse; margin: 0 auto; border: 2px solid #333;">'
-    for riga in griglia:
-        html += '<tr>'
-        for cella in riga:
-            bg = "black" if cella == "#" else "white"
-            color = "black" if cella != "#" else "black"
-            content = cella if cella not in ["#", " "] else "&nbsp;"
-            html += f'<td style="border: 1px solid #999; width: 35px; height: 35px; text-align: center; font-weight: bold; background: {bg}; color: {color};">{content}</td>'
-        html += '</tr>'
-    return html + '</table>'
+    def salva_stato(self):
+        stato_attuale = {
+            'griglia': [r[:] for r in self.griglia],
+            'parole_usate': set(self.parole_usate)
+        }
+        self.storico.append(stato_attuale)
 
-# --- Interfaccia Streamlit ---
-def main():
-    st.set_page_config(page_title="Editor Cruciverba 13x9", layout="centered")
-    assistant = AssistenteCruciverba()
-
-    st.title("🧩 Assistente Incastri 13x9")
-    st.write("Genera lo schema una parola alla volta per completarlo insieme.")
-
-    # Inizializzazione Session State
-    if 'griglia' not in st.session_state:
-        # Creiamo una griglia con caselle nere fisse (schema classico)
-        g = [[' ' for _ in range(9)] for _ in range(13)]
-        # Aggiungiamo alcune caselle nere simmetriche
-        nere = [(1,1), (1,7), (3,3), (3,5), (6,4), (9,3), (9,5), (11,1), (11,7), (0,4), (12,4)]
-        for r, c in nere: g[r][c] = '#'
-        st.session_state.griglia = g
-        st.session_state.parole_inserite = []
-        st.session_state.diz_pronto = False
-
-    # Sidebar per controllo dizionario
-    if not st.session_state.diz_pronto:
-        if st.button("📚 1. Carica Parole (Treccani/Base)"):
-            num = assistant.carica_dizionario()
-            st.session_state.diz_pronto = True
-            st.success(f"{num} parole caricate!")
-            st.rerun()
+    def inserisci_manuale(self, r, c, valore):
+        self.salva_stato()
+        self.griglia[r][c] = valore
     
-    # Area di lavoro
-    if st.session_state.diz_pronto:
-        col1, col2 = st.columns([2, 1])
+    def inserisci(self, parola, r, c, orientamento):
+        self.salva_stato()
+        lung = len(parola)
+        for i in range(lung):
+            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
+            self.griglia[rr][cc] = parola[i]
         
-        with col2:
-            st.write("### Comandi")
-            if st.button("➡️ Inserisci Prossima Parola", use_container_width=True):
-                # Logica di ricerca parola singola
-                segmenti = assistant.trova_segmenti(st.session_state.griglia)
-                parola_trovata = False
-                
-                # Cerchiamo il primo segmento vuoto o parzialmente pieno
-                for r, c_inizio, L in segmenti:
-                    # Controlliamo se è già pieno
-                    attuale = "".join(st.session_state.griglia[r][c_inizio:c_inizio+L])
-                    if " " not in attuale: continue
-                    
-                    # Creiamo il pattern per la ricerca (es: "A.B..")
-                    pattern_list = []
-                    for i, char in enumerate(attuale):
-                        if char != " ": pattern_list.append((i, char))
-                    
-                    candidati = st.session_state.parole_per_L.get(L, [])
-                    random.shuffle(candidati)
-                    
-                    for p in candidati:
-                        if p in st.session_state.parole_inserite: continue
-                        # Verifica pattern
-                        match = True
-                        for pos, let in pattern_list:
-                            if p[pos] != let:
-                                match = False; break
-                        
-                        if match:
-                            # Inseriamo la parola
-                            for i in range(L):
-                                st.session_state.griglia[r][c_inizio + i] = p[i]
-                            st.session_state.parole_inserite.append(p)
-                            parola_trovata = True
-                            break
-                    
-                    if parola_trovata: break
-                
-                if not parola_trovata:
-                    st.warning("⚠️ Nessun incrocio possibile trovato per i prossimi spazi!")
-                else:
-                    st.rerun()
+        # Aggiunta caselle nere di contorno (opzionale, tipico dei cruciverba)
+        if orientamento == 'O':
+            if c - 1 >= 0: self.griglia[r][c-1] = '#'
+            if c + lung < COLS: self.griglia[r][c+lung] = '#'
+        else:
+            if r - 1 >= 0: self.griglia[r-1][c] = '#'
+            if r + lung < ROWS: self.griglia[r+lung][c] = '#'
+        self.parole_usate.add(parola)
 
-            if st.button("🔄 Reset Griglia", type="secondary"):
-                del st.session_state.griglia
-                del st.session_state.parole_inserite
+    def annulla(self):
+        if self.storico:
+            ultimo_stato = self.storico.pop()
+            self.griglia = ultimo_stato['griglia']
+            self.parole_usate = ultimo_stato['parole_usate']
+            return True
+        return False
+
+    def estrai_segmento(self, griglia, r, c, orient):
+        res = ""
+        if orient == 'O':
+            c_start = c
+            while c_start > 0 and griglia[r][c_start-1] != '#': c_start -= 1
+            c_end = c
+            while c_end < COLS - 1 and griglia[r][c_end+1] != '#': c_end += 1
+            for j in range(c_start, c_end + 1): res += griglia[r][j]
+        else:
+            r_start = r
+            while r_start > 0 and griglia[r_start-1][c] != '#': r_start -= 1
+            r_end = r
+            while r_end < ROWS - 1 and griglia[r_end+1][c] != '#': r_end += 1
+            for j in range(r_start, r_end + 1): res += griglia[j][c]
+        return res
+
+    def verifica_legalita(self, r, c, parola, orientamento):
+        lung = len(parola)
+        # Controllo confini
+        if orientamento == 'O' and c + lung > COLS: return False
+        if orientamento == 'V' and r + lung > ROWS: return False
+        
+        temp_griglia = [row[:] for row in self.griglia]
+        for i in range(lung):
+            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
+            if temp_griglia[rr][cc].isalpha() and temp_griglia[rr][cc] != parola[i]: return False
+            if temp_griglia[rr][cc] == '#': return False
+            temp_griglia[rr][cc] = parola[i]
+
+        check_orient = 'O' if orientamento == 'V' else 'V'
+        for i in range(lung):
+            rr, cc = (r+i, c) if orientamento == 'V' else (r, c+i)
+            seg = self.estrai_segmento(temp_griglia, rr, cc, check_orient)
+            if len(seg) > 1 and ' ' not in seg:
+                if seg not in self.set_parole: return False
+        return True
+
+    def aggiungi_mossa(self):
+        if not self.parole_usate:
+            for lung in [7, 6, 5]:
+                if self.dizionario[lung]:
+                    p = random.choice(self.dizionario[lung])
+                    self.inserisci(p, 6, (COLS - lung) // 2, 'O')
+                    return True, f"Inizio con: {p}"
+            return False, "Dizionario vuoto!"
+
+        coords = [(r, c, o) for r in range(ROWS) for c in range(COLS) for o in ['O', 'V']]
+        random.shuffle(coords)
+        for r, c, o in coords:
+            for l in [6, 5, 4, 3]:
+                if not self.dizionario[l]: continue
+                patt = ""
+                ha_incrocio = False
+                spazio_libero = True
+                for i in range(l):
+                    rr, cc = (r+i, c) if o == 'V' else (r, c+i)
+                    if rr >= ROWS or cc >= COLS or self.griglia[rr][cc] == '#':
+                        spazio_libero = False; break
+                    char = self.griglia[rr][cc]
+                    if char.isalpha(): ha_incrocio = True
+                    patt += char
+                
+                if not spazio_libero or not ha_incrocio: continue
+                
+                candidati = [p for p in self.dizionario[l] if p not in self.parole_usate and all(patt[j] == ' ' or patt[j] == p[j] for j in range(l))]
+                random.shuffle(candidati)
+                for p_cand in candidati[:20]:
+                    if self.verifica_legalita(r, c, p_cand, o):
+                        self.inserisci(p_cand, r, c, o)
+                        return True, f"Aggiunta: {p_cand}"
+        return False, "Nessun incrocio trovato."
+
+    def render_html(self):
+        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
+        for r in range(ROWS):
+            html += '<tr>'
+            for c in range(COLS):
+                v = self.griglia[r][c]
+                bg = "#000" if v == "#" else "#fff"
+                color = "#fff" if v == "#" else "#000"
+                disp = v if v not in ["#", " "] else "&nbsp;"
+                html += f'<td style="width:38px;height:38px;border:1px solid #ddd;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:18px;">{disp}</td>'
+            html += '</tr>'
+        return html + "</table></div>"
+
+def main():
+    st.set_page_config(page_title="Cruciverba AI Builder", layout="centered")
+    
+    if 'm' not in st.session_state:
+        st.session_state.m = MotoreCorazzato()
+        st.session_state.caricato = False
+        st.session_state.log = "Carica il dizionario per iniziare."
+
+    st.title("🧩 Builder Cruciverba 13x9")
+    
+    if not st.session_state.caricato:
+        if st.button("📚 1. CARICA DIZIONARIO", use_container_width=True):
+            with st.spinner("Caricamento in corso..."):
+                st.session_state.m.carica_parole()
+                st.session_state.caricato = True
+                st.rerun()
+    else:
+        with st.sidebar:
+            st.header("🛠️ Strumenti Manuali")
+            tool = st.radio("Azione click sulla griglia:", ["Lettera ✍️", "Casella Nera ⚫"])
+            char = st.selectbox("Lettera da inserire:", list(" ABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+            st.divider()
+            if st.button("⬅️ ANNULLA MOSSA", use_container_width=True):
+                if st.session_state.m.annulla():
+                    st.session_state.log = "Annullato."
+                st.rerun()
+            if st.button("🔄 RESET TOTALE", use_container_width=True, type="primary"):
+                st.session_state.m.reset_griglia()
+                st.session_state.log = "Reset effettuato."
                 st.rerun()
 
-            st.write(f"**Parole in griglia:** {len(st.session_state.parole_inserite)}")
-            for p in st.session_state.parole_inserite[-10:]: # Ultime 10
-                st.text(f"✓ {p}")
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            if st.button("➕ AGGIUNGI PAROLA", use_container_width=True):
+                success, msg = st.session_state.m.aggiungi_mossa()
+                st.session_state.log = msg
+                st.rerun()
+            st.info(f"**Log:**\n{st.session_state.log}")
+            st.write(f"Parole usate: {len(st.session_state.m.parole_usate)}")
 
         with col1:
-            st.markdown(render_griglia(st.session_state.griglia), unsafe_allow_html=True)
-            st.caption("Ogni click aggiunge una parola orizzontale incastrandola con le lettere esistenti.")
+            # Griglia interattiva con bottoni Streamlit
+            for r in range(ROWS):
+                cols = st.columns([1]*COLS)
+                for c in range(COLS):
+                    val = st.session_state.m.griglia[r][c]
+                    label = " " if val == " " else val
+                    # Stile dinamico per caselle nere
+                    if cols[c].button(label, key=f"b_{r}_{c}", use_container_width=True):
+                        if tool == "Casella Nera ⚫":
+                            nuovo = "#" if val != "#" else " "
+                            st.session_state.m.inserisci_manuale(r, c, nuovo)
+                        else:
+                            st.session_state.m.inserisci_manuale(r, c, char.strip() if char.strip() else " ")
+                        st.rerun()
 
 if __name__ == "__main__":
     main()
