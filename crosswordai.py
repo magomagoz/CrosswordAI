@@ -44,12 +44,18 @@ class MotoreArchitetto:
             self.griglia[rr][cc] = p[i]
 
     def verifica_parola(self, parola):
-        conn = sqlite3.connect("dizionario.db")
-        c = conn.cursor()
-        c.execute("SELECT 1 FROM parole WHERE testo = ?", (parola.upper(),))
-        esiste = c.fetchone() is not None
-        conn.close()
-        return esiste
+        # Il file dizionario.db deve essere nella stessa cartella del file app.py
+        try:
+            conn = sqlite3.connect("dizionario.db")
+            c = conn.cursor()
+            c.execute("SELECT 1 FROM parole WHERE testo = ?", (parola.upper(),))
+            esiste = c.fetchone() is not None
+            conn.close()
+            return esiste
+        except Exception as e:
+            st.error(f"Errore database: {e}")
+            return False
+
 
     def trova_incastri(self, parola):
         validi = []
