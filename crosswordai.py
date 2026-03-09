@@ -95,7 +95,8 @@ def main():
         st.session_state.m = MotoreInterattivo()
         st.session_state.diz_pronto = False
 
-    st.title("🧩 Architect 13x9: Incastro Manuale")
+    st.image("banner.png")
+    #st.title("🧩 Architect 13x9: Incastro Manuale")
 
     with st.sidebar:
         if not st.session_state.diz_pronto:
