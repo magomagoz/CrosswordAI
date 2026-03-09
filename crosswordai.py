@@ -111,10 +111,8 @@ def main():
             if risultato:
                 idx = st.selectbox("Posizioni:", range(len(risultato)), format_func=lambda x: f"{risultato[x]['o']} - R{risultato[x]['r']+1}, C{risultato[x]['c']+1}")
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
-                if st.button("🚀 CONFERMA"):
-                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
-                    # Pulisci l'input per resettare la logica dell'anteprima
-                    st.session_state.input_parola = "" 
+                if st.button("🚀 CONFERMA E SCRIVI", use_container_width=True):
+                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o']); 
                     st.rerun()
 
             else: st.error("Nessun incastro.")
