@@ -8,7 +8,6 @@ COLS = 9
 
 class MotoreArchitetto:
     def __init__(self):
-        # Inizializziamo tutto vuoto
         self.dizionario = {} 
         self.set_parole = set()
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
@@ -16,30 +15,46 @@ class MotoreArchitetto:
         self.storico = []
         
     def carica_dizionario_massivo(self):
-        urls = [
-            "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt",
-            "https://raw.githubusercontent.com/dofoster87/italian-wordlist/master/italian-words.txt"
-        ]
+        # URL ultra-affidabile (Raw GitHub)
+        url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
         
-        count = 0
-        for url in urls:
-            try:
-                # Aumentiamo il timeout a 20 secondi per i 600.000 lemmi
-                res = requests.get(url, timeout=20)
-                if res.status_code == 200:
-                    linee = res.text.splitlines()
-                    for l in linee:
-                        p = l.strip().upper()
-                        if p.isalpha() and 2 <= len(p) <= 12:
-                            self.set_parole.add(p)
-                            L = len(p)
-                            if L not in self.dizionario: self.dizionario[L] = []
-                            self.dizionario[L].append(p)
-                            count += 1
-                    return count # Esci al primo successo
-            except:
-                continue
-        return count
+        # Simuliamo un browser per evitare blocchi del server
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        try:
+            # Aumentiamo il timeout e aggiungiamo gli headers
+            res = requests.get(url, headers=headers, timeout=30)
+            
+            if res.status_code == 200:
+                # Decodifica esplicita per evitare problemi con caratteri speciali
+                testo = res.content.decode('utf-8')
+                linee = testo.splitlines()
+                
+                temp_set = set()
+                for l in linee:
+                    # Pulizia estrema: rimuove spazi e converte in maiuscolo
+                    p = l.strip().upper()
+                    # Accetta solo parole di lettere standard A-Z
+                    if p.isalpha() and 2 <= len(p) <= 12:
+                        temp_set.add(p)
+                
+                # Popoliamo il dizionario strutturato
+                for p in temp_set:
+                    self.set_parole.add(p)
+                    L = len(p)
+                    if L not in self.dizionario: 
+                        self.dizionario[L] = []
+                    self.dizionario[L].append(p)
+                
+                return len(self.set_parole)
+            else:
+                st.error(f"Errore Server: Stato {res.status_code}")
+        except Exception as e:
+            st.error(f"Errore di Connessione: {str(e)}")
+        
+        return 0
         
     def salva_stato(self):
         self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
