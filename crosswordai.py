@@ -114,7 +114,7 @@ def main():
                 if st.button("🚀 CONFERMA"):
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o']); 
                     anteprima_data = None # <--- AGGIUNTA: forza la rimozione del colore blu
-                st.rerun()
+                    st.rerun()
 
             else: st.error("Nessun incastro.")
 
