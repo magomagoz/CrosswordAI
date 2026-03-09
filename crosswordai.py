@@ -1,41 +1,40 @@
 import streamlit as st
 import requests
+import random
 import re
 
-class MotoreArchitetto:
-    def __init__(self, rows, cols):
-        self.rows = rows
-        self.cols = cols
-        self.dizionario = {} 
+# --- CONFIGURAZIONE ---
+ROWS = 13
+COLS = 9
+
+class MotoreInterattivo:
+    def __init__(self):
+        self.dizionario = {i: [] for i in range(2, 14)}
         self.set_parole = set()
-        self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
+        self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
         self.storico = []
         
-    def carica_dizionario_massivo(self):
+    def carica_dizionario(self):
         url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
-        headers = {'User-Agent': 'Mozilla/5.0'}
         try:
-            res = requests.get(url, headers=headers, timeout=30)
+            res = requests.get(url, timeout=5)
             if res.status_code == 200:
-                # Decodifica corretta
                 linee = res.text.splitlines()
-                count = 0
                 for l in linee:
                     p = l.strip().upper()
-                    if p.isalpha() and 2 <= len(p) <= max(self.rows, self.cols):
+                    if p.isalpha() and 2 <= len(p) <= 12:
                         self.set_parole.add(p)
-                        L = len(p)
-                        if L not in self.dizionario: self.dizionario[L] = []
-                        self.dizionario[L].append(p)
-                        count += 1
-                return count
-        except Exception as e:
-            st.error(f"Errore: {str(e)}")
-        return 0
+                        self.dizionario[len(p)].append(p)
+                return True
+        except: pass
+        return False
 
     def salva_stato(self):
-        self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
+        self.storico.append({
+            'griglia': [r[:] for r in self.griglia],
+            'parole_usate': set(self.parole_usate)
+        })
 
     def annulla(self):
         if self.storico:
@@ -45,109 +44,104 @@ class MotoreArchitetto:
             return True
         return False
 
-    def toggle_nera(self, r, c):
-        self.salva_stato()
-        self.griglia[r][c] = '#' if self.griglia[r][c] != '#' else ' '
-
     def inserisci_parola(self, parola, r, c, orient):
         self.salva_stato()
-        p = parola.upper()
-        for i in range(len(p)):
+        parola = parola.upper()
+        for i in range(len(parola)):
             rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
-            self.griglia[rr][cc] = p[i]
-        self.parole_usate.add(p)
+            self.griglia[rr][cc] = parola[i]
+        self.parole_usate.add(parola)
 
-    def trova_incastri(self, parola):
-        validi = []
-        if not parola or len(parola) < 2: return validi
-        L = len(parola); p_upper = parola.upper()
-        vuota = not any(c.isalpha() for r in self.griglia for c in r)
+    def verifica_legalita(self, r, c, parola, orient):
+        L = len(parola)
+        if orient == 'O' and c + L > COLS: return False
+        if orient == 'V' and r + L > ROWS: return False
         
-        for r in range(self.rows):
-            for c in range(self.cols):
+        # Controllo sovrapposizione e collisioni
+        ha_incrocio = False
+        for i in range(L):
+            rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
+            cella_attuale = self.griglia[rr][cc]
+            if cella_attuale == '#': return False
+            if cella_attuale.isalpha():
+                if cella_attuale != parola[i]: return False
+                ha_incrocio = True
+        
+        # Se la griglia non è vuota, pretendiamo un incrocio (opzionale)
+        if len(self.parole_usate) > 0 and not ha_incrocio:
+            return False
+            
+        return True
+
+    def trova_tutti_incastri(self, parola):
+        parola = parola.upper()
+        L = len(parola)
+        validi = []
+        for r in range(ROWS):
+            for c in range(COLS):
                 for o in ['O', 'V']:
-                    if (o == 'O' and c + L > self.cols) or (o == 'V' and r + L > self.rows): continue
-                    match, incrocio = True, False
-                    for i in range(L):
-                        rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                        cel = self.griglia[rr][cc]
-                        if cel == '#': match = False; break
-                        if cel.isalpha():
-                            if cel != p_upper[i]: match = False; break
-                            incrocio = True
-                    if match and (vuota or incrocio):
+                    if self.verifica_legalita(r, c, parola, o):
                         validi.append({'r': r, 'c': c, 'o': o})
         return validi
 
-    def render_html(self, anteprima=None):
-        html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
-        temp_grid = [r[:] for r in self.griglia]
-        if anteprima:
-            p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
-            for i in range(len(p)):
-                rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                if 0 <= rr < self.rows and 0 <= cc < self.cols:
-                    if temp_grid[rr][cc] == ' ': 
-                        temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
-        
-        for r in range(self.rows):
-            html += '<tr>'
-            for c in range(self.cols):
-                val = temp_grid[r][c]
-                bg = "black" if val == "#" else "white"
-                display = val if (val != " " and val != "#") else "&nbsp;"
-                html += f'<td style="border: 1px solid #444; width: 35px; height: 35px; text-align: center; font-weight: bold; background: {bg}; color: black; font-size: 18px;">{display}</td>'
-            html += '</tr>'
-        return html + '</table>'
-
 def main():
-    st.set_page_config(page_title="Editor Professionale", layout="wide")
+    st.set_page_config(page_title="Crossword Architect", layout="wide")
     
+    if 'm' not in st.session_state:
+        st.session_state.m = MotoreInterattivo()
+        st.session_state.diz_pronto = False
+
+    st.title("🧩 Architect 13x9: Incastro Manuale")
+
     with st.sidebar:
-        st.title("📐 Configurazione")
-        new_rows = st.slider("Righe", 3, 25, 13)
-        new_cols = st.slider("Colonne", 3, 25, 9)
-        
-        if 'm' not in st.session_state or st.session_state.m.rows != new_rows or st.session_state.m.cols != new_cols:
-            st.session_state.m = MotoreArchitetto(new_rows, new_cols)
-            st.session_state.caricato = False
-
-        if st.button("📚 SCARICA DIZIONARIO", use_container_width=True):
-            with st.spinner("Scaricamento lemmi..."):
-                n = st.session_state.m.carica_dizionario_massivo()
-                if n > 0:
-                    st.session_state.caricato = True
-                    st.success(f"Caricati {n} lemmi!")
-                else:
-                    st.error("Errore nel caricamento.")
+        if not st.session_state.diz_pronto:
+            if st.button("📚 Carica Dizionario"):
+                st.session_state.m.carica_dizionario()
+                st.session_state.diz_pronto = True
+                st.rerun()
         
         st.divider()
-    
-        st.subheader("⚫ Caselle Nere")
-        c1, c2 = st.columns(2)
-        # USIAMO I VALORI DINAMICI QUI
-        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
-        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
-        if st.button("Metti/Togli Nera", use_container_width=True):
-            st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
-            
+        st.subheader("✍️ Inserimento Manuale")
+        input_parola = st.text_input("Scrivi la parola:").upper()
+        
+        if input_parola:
+            opzioni = st.session_state.m.trova_tutti_incastri(input_parola)
+            if opzioni:
+                st.success(f"Trovati {len(opzioni)} incastri possibili!")
+                scelta = st.selectbox("Scegli posizione:", range(len(opzioni)), 
+                                    format_func=lambda x: f"{opzioni[x]['o']} a Riga {opzioni[x]['r']+1}, Col {opzioni[x]['c']+1}")
+                if st.button("✅ Inserisci in Griglia"):
+                    pos = opzioni[scelta]
+                    st.session_state.m.inserisci_parola(input_parola, pos['r'], pos['c'], pos['o'])
+                    st.rerun()
+            else:
+                st.error("Nessun incastro legale possibile.")
+
         st.divider()
-        st.subheader("✍️ Inserimento Parola")
-        p_in = st.text_input("Parola:").upper().strip()
-        anteprima_data = None
-        if p_in and st.session_state.caricato:
-            res = st.session_state.m.trova_incastri(p_in)
-            if res:
-                idx = st.selectbox("Posizioni:", range(len(res)), format_func=lambda x: f"{res[x]['o']} - R{res[x]['r']+1}, C{res[x]['c']+1}")
-                anteprima_data = {'p': p_in, 'r': res[idx]['r'], 'c': res[idx]['c'], 'o': res[idx]['o']}
-                if st.button("🚀 CONFERMA", use_container_width=True):
-                    st.session_state.m.inserisci_parola(p_in, res[idx]['r'], res[idx]['c'], res[idx]['o']); st.rerun()
-            else: st.error("Nessun incastro.")
+        if st.button("⬅️ Annulla"):
+            st.session_state.m.annulla()
+            st.rerun()
 
-        if st.button("⬅️ ANNULLA", use_container_width=True):
-            if st.session_state.m.annulla(): st.rerun()
-
-    st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
+    # Visualizzazione Griglia
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        # Generiamo la visualizzazione HTML
+        html = '<div style="display:flex;justify-content:center;"><table style="border-collapse:collapse;border:3px solid #000;">'
+        for r in range(ROWS):
+            html += '<tr>'
+            for c in range(COLS):
+                v = st.session_state.m.griglia[r][c]
+                bg = "#000" if v == "#" else "#fff"
+                color = "#000"
+                html += f'<td style="width:40px;height:40px;border:1px solid #ccc;background:{bg};color:{color};text-align:center;font-weight:bold;font-size:20px;">{v if v != " " else "&nbsp;"}</td>'
+            html += '</tr>'
+        html += "</table></div>"
+        st.markdown(html, unsafe_allow_html=True)
+        
+    with col2:
+        st.write("**Parole inserite:**")
+        for p in st.session_state.m.parole_usate:
+            st.write(f"- {p}")
 
 if __name__ == "__main__":
     main()
