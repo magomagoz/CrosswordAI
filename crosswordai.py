@@ -8,8 +8,9 @@ COLS = 9
 
 class MotoreArchitetto:
     def __init__(self, rows, cols):
-        self.rows = ROWS
-        self.cols = COLS
+        self.rows = rows  # <--- CORRETTO: usa il parametro dinamico
+        self.cols = cols  # <--- CORRETTO: usa il parametro dinamico
+
         self.dizionario = {} 
         self.set_parole = set()
         self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
