@@ -8,31 +8,24 @@ COLS = 9
 
 class MotoreArchitetto:
     def __init__(self):
-        # Protezione: Parole integrate se internet non funziona
-        self.backup_parole = [
-            "CASA", "SOLE", "MARE", "MONTE", "LIBRO", "ESTATE", "STORIA", "AMORE", 
-            "GATTO", "CANTO", "PIANO", "FORTE", "TAVOLO", "SEDIA", "PORTA", "VINO",
-            "PANE", "CIELO", "NOTTE", "GIORNO", "CUORE", "MANO", "VOCE", "LUCE"
-        ]
-        self.dizionario = {len(p): [p] for p in self.backup_parole}
-        self.set_parole = set(self.backup_parole)
+        # Inizializziamo tutto vuoto
+        self.dizionario = {} 
+        self.set_parole = set()
         self.griglia = [[' ' for _ in range(COLS)] for _ in range(ROWS)]
         self.parole_usate = set()
         self.storico = []
         
     def carica_dizionario_massivo(self):
-        # Proviamo due server diversi per sicurezza
         urls = [
             "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt",
             "https://raw.githubusercontent.com/dofoster87/italian-wordlist/master/italian-words.txt"
         ]
         
-        successo = False
         count = 0
-        
         for url in urls:
             try:
-                res = requests.get(url, timeout=5)
+                # Aumentiamo il timeout a 20 secondi per i 600.000 lemmi
+                res = requests.get(url, timeout=20)
                 if res.status_code == 200:
                     linee = res.text.splitlines()
                     for l in linee:
@@ -43,12 +36,11 @@ class MotoreArchitetto:
                             if L not in self.dizionario: self.dizionario[L] = []
                             self.dizionario[L].append(p)
                             count += 1
-                    successo = True
-                    break # Se il primo funziona, ci fermiamo
+                    return count # Esci al primo successo
             except:
                 continue
-        
-        return count if successo else len(self.set_parole)
+        return count
+
 
     def salva_stato(self):
         self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
