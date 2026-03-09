@@ -17,18 +17,6 @@ class MotoreArchitetto:
         self.parole_usate = set()
         self.storico = []
 
-# 1. Funzione cache per il dizionario (risolve il problema della connessione)
-@st.cache_data
-def scarica_dizionario_sicuro():
-    url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
-    try:
-        res = requests.get(url, timeout=30)
-        if res.status_code == 200:
-            return set(p.strip().upper() for p in res.text.splitlines() if p.isalpha())
-    except:
-        return set()
-    return set()
-
 class MotoreArchitetto:
     def __init__(self, rows, cols):
         self.rows = rows
