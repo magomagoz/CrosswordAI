@@ -18,19 +18,18 @@ class MotoreArchitetto:
         try:
             res = requests.get(url, headers=headers, timeout=30)
             if res.status_code == 200:
-                testo = res.content.decode('utf-8')
-                linee = testo.splitlines()
-                temp_set = set()
+                # Decodifica corretta
+                linee = res.text.splitlines()
+                count = 0
                 for l in linee:
                     p = l.strip().upper()
                     if p.isalpha() and 2 <= len(p) <= max(self.rows, self.cols):
-                        temp_set.add(p)
-                for p in temp_set:
-                    self.set_parole.add(p)
-                    L = len(p)
-                    if L not in self.dizionario: self.dizionario[L] = []
-                    self.dizionario[L].append(p)
-                return len(self.set_parole)
+                        self.set_parole.add(p)
+                        L = len(p)
+                        if L not in self.dizionario: self.dizionario[L] = []
+                        self.dizionario[L].append(p)
+                        count += 1
+                return count
         except Exception as e:
             st.error(f"Errore: {str(e)}")
         return 0
@@ -64,7 +63,6 @@ class MotoreArchitetto:
         L = len(parola); p_upper = parola.upper()
         vuota = not any(c.isalpha() for r in self.griglia for c in r)
         
-        # ORA USIAMO self.rows e self.cols
         for r in range(self.rows):
             for c in range(self.cols):
                 for o in ['O', 'V']:
@@ -88,8 +86,9 @@ class MotoreArchitetto:
             p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
             for i in range(len(p)):
                 rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                if temp_grid[rr][cc] == ' ': 
-                    temp_grid[rr][cc] = f'<span style="color:#007bff; font-weight:normal;">{p[i]}</span>'
+                if 0 <= rr < self.rows and 0 <= cc < self.cols:
+                    if temp_grid[rr][cc] == ' ': 
+                        temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
         
         for r in range(self.rows):
             html += '<tr>'
@@ -97,12 +96,12 @@ class MotoreArchitetto:
                 val = temp_grid[r][c]
                 bg = "black" if val == "#" else "white"
                 display = val if (val != " " and val != "#") else "&nbsp;"
-                html += f'<td style="border: 1px solid #444; width: 35px; height: 35px; text-align: center; font-weight: bold; font-family: Arial; background: {bg}; color: black; font-size: 18px;">{display}</td>'
+                html += f'<td style="border: 1px solid #444; width: 35px; height: 35px; text-align: center; font-weight: bold; background: {bg}; color: black; font-size: 18px;">{display}</td>'
             html += '</tr>'
         return html + '</table>'
 
 def main():
-    st.set_page_config(page_title="Custom Crossword Editor", layout="wide")
+    st.set_page_config(page_title="Editor Professionale", layout="wide")
     
     with st.sidebar:
         st.title("📐 Configurazione")
@@ -114,10 +113,16 @@ def main():
             st.session_state.caricato = False
 
         if st.button("📚 SCARICA DIZIONARIO", use_container_width=True):
-            n = st.session_state.m.carica_dizionario_massivo()
-            if n > 0: st.session_state.caricato = True; st.success(f"Dizionario pronto!")
+            with st.spinner("Scaricamento lemmi..."):
+                n = st.session_state.m.carica_dizionario_massivo()
+                if n > 0:
+                    st.session_state.caricato = True
+                    st.success(f"Caricati {n} lemmi!")
+                else:
+                    st.error("Errore nel caricamento.")
         
         st.divider()
+    
         st.subheader("⚫ Caselle Nere")
         c1, c2 = st.columns(2)
         # USIAMO I VALORI DINAMICI QUI
