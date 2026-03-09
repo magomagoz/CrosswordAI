@@ -27,7 +27,10 @@ class MotoreArchitetto:
     def inserisci_parola(self, parola, r, c, orient):
         self.salva_stato()
         p = parola.upper()
-        self.parole_usate.append({'p': p, 'o': orient, 'r': r+1, 'c': c+1})
+        # Verifica se la parola è già stata inserita con le stesse coordinate e orientamento
+        if not any(item['p'] == p and item['r'] == r+1 and item['c'] == c+1 for item in self.parole_usate):
+            self.parole_usate.append({'p': p, 'o': orient, 'r': r+1, 'c': c+1})
+        
         for i in range(len(p)):
             rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
             self.griglia[rr][cc] = p[i]
