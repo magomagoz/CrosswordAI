@@ -44,8 +44,6 @@ class MotoreArchitetto:
             st.error(f"Errore: {str(e)}")
         return 0
 
-
-
     def salva_stato(self):
         self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
 
@@ -112,12 +110,11 @@ class MotoreArchitetto:
             html += '</tr>'
         return html + '</table>'
 
-
-
 def main():
     st.set_page_config(page_title="Editor Professionale 13x9", layout="wide")
     if 'm' not in st.session_state:
-        st.session_state.m = MotoreArchitetto()
+        # Invece di st.session_state.m = MotoreArchitetto()
+        st.session_state.m = MotoreArchitetto(13, 9) 
         st.session_state.caricato = False
         
     with st.sidebar:
