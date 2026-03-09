@@ -16,34 +16,27 @@ class MotoreArchitetto:
         self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
         self.parole_usate = set()
         self.storico = []
-        
-    def carica_dizionario_massivo(self):
-        url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        try:
-            res = requests.get(url, headers=headers, timeout=30)
-            if res.status_code == 200:
-                testo = res.content.decode('utf-8')
-                linee = testo.splitlines()
-                temp_set = set()
-                for l in linee:
-                    p = l.strip().upper()
-                    # Accetta parole proporzionate alla griglia massima
-                    if p.isalpha() and 2 <= len(p) <= max(self.rows, self.cols):
-                        temp_set.add(p)
-                
-                for p in temp_set:
-                    self.set_parole.add(p)
-                    L = len(p)
-                    if L not in self.dizionario: self.dizionario[L] = []
-                    self.dizionario[L].append(p)
-                return len(self.set_parole)
-        except Exception as e:
-            st.error(f"Errore: {str(e)}")
-        return 0
 
+# 1. Funzione cache per il dizionario (risolve il problema della connessione)
+@st.cache_data
+def scarica_dizionario_sicuro():
+    url = "https://raw.githubusercontent.com/napolux/paroleitaliane/master/parole_italiane.txt"
+    try:
+        res = requests.get(url, timeout=30)
+        if res.status_code == 200:
+            return set(p.strip().upper() for p in res.text.splitlines() if p.isalpha())
+    except:
+        return set()
+    return set()
+
+class MotoreArchitetto:
+    def __init__(self, rows, cols):
+        self.rows = rows
+        self.cols = cols
+        self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
+        self.parole_usate = [] 
+        self.storico = []
+        
     def salva_stato(self):
         self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': set(self.parole_usate)})
 
@@ -60,12 +53,11 @@ class MotoreArchitetto:
         self.griglia[r][c] = '#' if self.griglia[r][c] != '#' else ' '
 
     def inserisci_parola(self, parola, r, c, orient):
-        self.salva_stato()
         p = parola.upper()
+        self.parole_usate.append({'p': p, 'o': orient, 'r': r+1, 'c': c+1})
         for i in range(len(p)):
             rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
             self.griglia[rr][cc] = p[i]
-        self.parole_usate.add(p)
 
     def trova_incastri(self, parola):
         validi = []
@@ -89,33 +81,38 @@ class MotoreArchitetto:
                     if match and (vuota or incrocio):
                         validi.append({'r': r, 'c': c, 'o': o})
         return validi
-
-    def render_html(self, anteprima=None):
-        html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
-        temp_grid = [r[:] for r in self.griglia]
-        if anteprima:
-            p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
-            for i in range(len(p)):
-                rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                if temp_grid[rr][cc] == ' ': 
-                    temp_grid[rr][cc] = f'<span style="color:#007bff; font-weight:normal;">{p[i]}</span>'
         
+    def render_html(self):
+        # Genera tabella HTML base
+        html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black;">'
         for r in range(self.rows):
+            html += '<tr>'
             for c in range(self.cols):
-                if (o == 'O' and c + L > self.cols) or (o == 'V' and r + L > self.rows): continue
-                val = temp_grid[r][c]
-                bg = "black" if val == "#" else "white"
-                display = val if (val != " " and val != "#") else "&nbsp;"
-                html += f'<td style="border: 1px solid #444; width: 42px; height: 42px; text-align: center; font-weight: bold; font-family: Arial; background: {bg}; color: black; font-size: 22px;">{display}</td>'
+                val = self.griglia[r][c]
+                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center;">{val}</td>'
             html += '</tr>'
         return html + '</table>'
 
 def main():
-    st.set_page_config(page_title="Editor Professionale 13x9", layout="wide")
+    st.set_page_config(page_title="Editor Professionale", layout="wide")
+    
+    # Inizializzazione sicura
     if 'm' not in st.session_state:
-        # Invece di st.session_state.m = MotoreArchitetto()
-        st.session_state.m = MotoreArchitetto(13, 9) 
-        st.session_state.caricato = False
+        st.session_state.m = MotoreArchitetto(13, 9)
+    
+    # Sidebar configurazione
+    with st.sidebar:
+        if st.button("📚 SCARICA DIZIONARIO"):
+            st.session_state.dizionario = scarica_dizionario_sicuro()
+            st.success("Dizionario pronto!")
+            
+    # Visualizzazione
+    st.markdown(st.session_state.m.render_html(), unsafe_allow_html=True)
+    
+    # Liste parole sotto la griglia
+    col1, col2 = st.columns(2)
+    with col1: st.subheader("Orizzontali"); # Logica per filtrare
+    with col2: st.subheader("Verticali");   # Logica per filtrare
         
     with st.sidebar:
         st.title("📐 Configurazione")
