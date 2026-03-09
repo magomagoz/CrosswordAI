@@ -36,6 +36,11 @@ class MotoreInterattivo:
             'parole_usate': set(self.parole_usate)
         })
 
+    def toggle_nera(self, r, c):
+        self.salva_stato()
+        self.griglia[r][c] = '#' if self.griglia[r][c] != '#' else ' '
+
+    
     def annulla(self):
         if self.storico:
             stato = self.storico.pop()
@@ -122,6 +127,18 @@ def main():
             st.session_state.m.annulla()
             st.rerun()
 
+        st.divider()
+        
+        # Gestione Caselle Nere tramite coordinate per non rompere la griglia
+        st.subheader("⬛ Gestione Caselle Nere")
+        c1, c2 = st.columns(2)
+        r_nera = c1.number_input("Riga", 1, ROWS, 1) - 1
+        c_nera = c2.number_input("Colonna", 1, COLS, 1) - 1
+        if st.button("Metti/Togli Nera", use_container_width=True):
+            st.session_state.m.toggle_nera(r_nera, c_nera)
+            st.rerun()
+
+    
     # Visualizzazione Griglia
     col1, col2 = st.columns([3, 1])
     with col1:
