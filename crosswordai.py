@@ -78,7 +78,6 @@ class MotoreArchitetto:
             html += '</tr>'
         return html + '</table>'
 
-
     def calcola_numeri(self):
         numeri = {}
         contatore = 1
