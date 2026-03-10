@@ -7,18 +7,54 @@ class MotoreArchitetto:
         self.cols = cols
         self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
         self.parole_usate = []
-        self.storico = []
+        self.storico_undo = [] # Mosse passate
+        self.storico_redo = [] # Mosse annullate
 
     def salva_stato(self):
-        self.storico.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
+        # Ogni nuova azione svuota il redo (come in Word/Excel)
+        self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
+        self.storico_redo = [] 
 
     def annulla(self):
-        if self.storico:
-            stato = self.storico.pop()
+        if self.storico_undo:
+            # Sposta stato corrente in redo
+            self.storico_redo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
+            stato = self.storico_undo.pop()
             self.griglia = stato['griglia']
             self.parole_usate = stato['parole_usate']
             return True
         return False
+
+    def ripristina(self): # Tasto REDO
+        if self.storico_redo:
+            self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
+            stato = self.storico_redo.pop()
+            self.griglia = stato['griglia']
+            self.parole_usate = stato['parole_usate']
+            return True
+        return False
+
+    def elimina_parola(self, parola_da_eliminare):
+        self.salva_stato()
+        p = parola_da_eliminare.upper()
+        # Filtra le parole: tiene solo quelle diverse da quella indicata
+        nuova_lista = [item for item in self.parole_usate if item['p'] != p]
+        
+        if len(nuova_lista) == len(self.parole_usate):
+            return False # Parola non trovata
+        
+        self.parole_usate = nuova_lista
+        # Ricalcola la griglia pulita
+        self.griglia = [[' ' for _ in range(self.cols)] for _ in range(self.rows)]
+        # Riscrive tutte le parole rimaste
+        for item in self.parole_usate:
+            self._scrivi_forzato(item['p'], item['r']-1, item['c']-1, item['o'])
+        return True
+
+    def _scrivi_forzato(self, p, r, c, orient):
+        for i in range(len(p)):
+            rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
+            self.griglia[rr][cc] = p[i]
 
     def toggle_nera(self, r, c):
         self.salva_stato()
@@ -143,11 +179,25 @@ def main():
                     st.rerun()
             else: st.error("Nessun incastro possibile.")
 
-        if st.button("⬅️ Annulla"):
-            st.session_state.m.annulla()
-            st.rerun()
-
-        
+            st.divider()
+            st.subheader("🔄 Controllo Mosse")
+            c1, c2 = st.columns(2)
+            if c1.button("⬅️ ANNULLA"):
+                if st.session_state.m.annulla(): st.rerun()
+            if c2.button("➡️ RIPRISTINA"):
+                if st.session_state.m.ripristina(): st.rerun()
+    
+            st.divider()
+            st.subheader("🗑️ Elimina Parola")
+            p_del = st.text_input("Scrivi parola da rimuovere:", key="del_parola").upper().strip()
+            if st.button("Rimuovi dallo schema"):
+                if st.session_state.m.elimina_parola(p_del):
+                    st.success(f"Parola '{p_del}' rimossa!")
+                    st.session_state.del_parola = ""
+                    st.rerun()
+                else:
+                    st.error("Parola non trovata!")
+    
         st.divider()
         st.subheader("⬛ Caselle Nere")
         c1, c2 = st.columns(2)
