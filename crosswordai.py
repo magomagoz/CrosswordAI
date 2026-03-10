@@ -179,24 +179,24 @@ def main():
                     st.rerun()
             else: st.error("Nessun incastro possibile.")
 
-            st.divider()
-            st.subheader("🔄 Controllo Mosse")
-            c1, c2 = st.columns(2)
-            if c1.button("⬅️ ANNULLA"):
-                if st.session_state.m.annulla(): st.rerun()
-            if c2.button("➡️ RIPRISTINA"):
-                if st.session_state.m.ripristina(): st.rerun()
+        st.divider()
+        st.subheader("🔄 Controllo Mosse")
+        c1, c2 = st.columns(2)
+        if c1.button("⬅️ ANNULLA"):
+            if st.session_state.m.annulla(): st.rerun()
+        if c2.button("➡️ RIPRISTINA"):
+            if st.session_state.m.ripristina(): st.rerun()
     
-            st.divider()
-            st.subheader("🗑️ Elimina Parola")
-            p_del = st.text_input("Scrivi parola da rimuovere:", key="del_parola").upper().strip()
-            if st.button("Rimuovi dallo schema"):
-                if st.session_state.m.elimina_parola(p_del):
-                    st.success(f"Parola '{p_del}' rimossa!")
-                    st.session_state.del_parola = ""
-                    st.rerun()
-                else:
-                    st.error("Parola non trovata!")
+        st.divider()
+        st.subheader("🗑️ Elimina Parola")
+        p_del = st.text_input("Scrivi parola da rimuovere:", key="del_parola").upper().strip()
+        if st.button("Rimuovi dallo schema"):
+            if st.session_state.m.elimina_parola(p_del):
+                st.success(f"Parola '{p_del}' rimossa!")
+                st.session_state.del_parola = ""
+                st.rerun()
+            else:
+                st.error("Parola non trovata!")
     
         st.divider()
         st.subheader("⬛ Caselle Nere")
