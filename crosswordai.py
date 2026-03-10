@@ -155,6 +155,7 @@ def main():
         c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
         if st.button("Metti/Togli Nera"):
             st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
+        st.divider()
 
     st.image("banner.png")
     st.title("🧩 Griglia Cruciverba")
