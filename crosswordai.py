@@ -125,15 +125,8 @@ def main():
         if st.button("Applica Schema"):
             st.session_state.m = MotoreArchitetto(rows, cols)
             st.rerun()
-        
-        st.divider()
-        st.subheader("⬛ Caselle Nere")
-        c1, c2 = st.columns(2)
-        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
-        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
-        if st.button("Metti/Togli Nera"):
-            st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
 
+        st.divider()
         st.subheader("✍️ Inserimento Parola")
         p_in = st.text_input("Parola (libera):", key="input_parola").upper().strip()
         anteprima_data = None
@@ -147,6 +140,14 @@ def main():
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
                     st.rerun()
             else: st.error("Nessun incastro possibile.")
+        
+        st.divider()
+        st.subheader("⬛ Caselle Nere")
+        c1, c2 = st.columns(2)
+        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
+        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
+        if st.button("Metti/Togli Nera"):
+            st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
 
     st.image("banner.png")
     st.title("🧩 Griglia Cruciverba")
