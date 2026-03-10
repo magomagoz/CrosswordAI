@@ -56,6 +56,7 @@ class MotoreArchitetto:
         return validi
         
     def render_html(self, anteprima=None):
+        numeri = self.calcola_numeri()
         html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
         temp_grid = [r[:] for r in self.griglia]
         if anteprima:
@@ -71,6 +72,8 @@ class MotoreArchitetto:
                 val = temp_grid[r][c]
                 bg = "black" if val == "#" else "white"
                 display = val if (val != " " and val != "#") else "&nbsp;"
+                numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
+
                 html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg};">{display}</td>'
             html += '</tr>'
         return html + '</table>'
