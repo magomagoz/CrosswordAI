@@ -61,7 +61,12 @@ class MotoreArchitetto:
         
         html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
         temp_grid = [r[:] for r in self.griglia]
-        # ... (gestione anteprima invariata) ...
+        if anteprima:
+            p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
+            for i in range(len(p)):
+                rr, cc = (r+i, c) if o == 'V' else (r, c+i)
+                if 0 <= rr < self.rows and 0 <= cc < self.cols:
+                    temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
         
         for r in range(self.rows):
             html += '<tr>'
@@ -81,7 +86,6 @@ class MotoreArchitetto:
                 </td>'''
             html += '</tr>'
         return html + '</table>'
-
 
     def calcola_numeri(self):
         numeri = {}
@@ -158,7 +162,7 @@ def main():
     st.image("banner.png")
     st.title("🧩 Griglia Cruciverba")
     st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
-
+    
     st.divider()
     # Creiamo due colonne sotto la griglia per dividere le liste
     col1, col2 = st.columns(2)
