@@ -68,13 +68,13 @@ class MotoreArchitetto:
                 if 0 <= rr < self.rows and 0 <= cc < self.cols:
                     temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
         
-        for r in range(self.rows):
-            html += '<tr>'
-            for c in range(self.cols):
-                val = temp_grid[r][c]
-                bg = "black" if val == "#" else "white"
-                display = val if (val != " " and val != "#") else "&nbsp;"
-                
+            for r in range(self.rows):
+                html += '<tr>'
+                for c in range(self.cols):
+                    val = temp_grid[r][c]
+                    bg = "black" if val == "#" else "white"
+                    display = val if (val != " " and val != "#") else "&nbsp;"
+                    
                 # Numero in alto a sx
                 numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
                 
