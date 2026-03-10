@@ -143,6 +143,11 @@ def main():
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
                     st.rerun()
             else: st.error("Nessun incastro possibile.")
+
+        if st.button("⬅️ Annulla"):
+            st.session_state.m.annulla()
+            st.rerun()
+
         
         st.divider()
         st.subheader("⬛ Caselle Nere")
