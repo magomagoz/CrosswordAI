@@ -1,4 +1,3 @@
-Quando confermo e scrivo una parola non la fissa sulla griglia, quella dopo fa sparire la parola prima: import streamlit as st
 import os
 
 class MotoreArchitetto:
