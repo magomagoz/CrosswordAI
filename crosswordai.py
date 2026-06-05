@@ -108,9 +108,16 @@ class MotoreArchitetto:
                 val = temp_grid[r][c]
                 bg = "black" if val == "#" else "white"
                 display = val if (val != " " and val != "#") else "&nbsp;"
-                numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
 
-                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg};">{display}</td>'
+                # CORREZIONE QUI: Inseriamo il numero nella cella
+                numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
+                
+                html += f'''
+                <td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative;">
+                    {numero_html}
+                    <div style="margin-top: 10px;">{display}</div>
+                </td>'''
+                                
             html += '</tr>'
         return html + '</table>'
 
@@ -174,9 +181,14 @@ def main():
             if risultato:
                 idx = st.selectbox("Posizioni:", range(len(risultato)), format_func=lambda x: f"{risultato[x]['o']} - R{risultato[x]['r']+1}, C{risultato[x]['c']+1}")
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
+                
+                # CORREZIONE QUI:
                 if st.button("🚀 CONFERMA E SCRIVI"):
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
+                    # Forza l'aggiornamento dello stato
+                    st.session_state.m = st.session_state.m 
                     st.rerun()
+
             else: st.error("Nessun incastro possibile.")
 
         st.divider()
