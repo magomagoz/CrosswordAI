@@ -236,4 +236,4 @@ def main():
             st.write("Nessuna parola.")
 
 if __name__ == "__main__":
-    main()
+   main()
