@@ -2,8 +2,8 @@ import streamlit as st
 
 class MotoreArchitetto:
     """
-    La classe ora contiene solo funzioni pure o metodi statici.
-    Non memorizza dati al suo interno, ma riceve e restituisce lo stato attuale.
+    Classe con metodi statici per gestire lo stato puro (Dizionario)
+    evitando i bug di caching di Streamlit.
     """
     @staticmethod
     def inizializza_stato(rows, cols):
@@ -18,7 +18,6 @@ class MotoreArchitetto:
 
     @staticmethod
     def salva_stato(stato):
-        # Crea una copia pulita dello stato attuale prima di modificarlo
         copia_griglia = [r[:] for r in stato['griglia']]
         copia_parole = list(stato['parole_usate'])
         stato['storico_undo'].append({'griglia': copia_griglia, 'parole_usate': copia_parole})
@@ -55,14 +54,13 @@ class MotoreArchitetto:
         MotoreArchitetto.salva_stato(stato)
         p = parola.upper()
         
-        # Aggiunge alla lista delle parole usate se non presente
         if not any(item['p'] == p and item['r'] == r+1 and item['c'] == c+1 for item in stato['parole_usate']):
             stato['parole_usate'].append({'p': p, 'o': orient, 'r': r+1, 'c': c+1})
             
-        # Scrive fisicamente sulla griglia
         for i in range(len(p)):
             rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
-            stato['griglia'][rr][cc] = p[i]
+            if 0 <= rr < stato['rows'] and 0 <= cc < stato['cols']:
+                stato['griglia'][rr][cc] = p[i]
 
     @staticmethod
     def toggle_nera(stato, r, c):
@@ -79,8 +77,6 @@ class MotoreArchitetto:
             return False
             
         stato['parole_usate'] = nuova_lista
-        # Ricostruisce la griglia da zero usando le caselle nere rimaste e le parole rimaste
-        # (Per semplicità riascolta la griglia mantenendo solo le nere attuali)
         for r in range(stato['rows']):
             for c in range(stato['cols']):
                 if stato['griglia'][r][c] != '#':
@@ -90,7 +86,8 @@ class MotoreArchitetto:
             p_curr, orient, r_curr, c_curr = item['p'], item['o'], item['r']-1, item['c']-1
             for i in range(len(p_curr)):
                 rr, cc = (r_curr+i, c_curr) if orient == 'V' else (r_curr, c_curr+i)
-                stato['griglia'][rr][cc] = p_curr[i]
+                if 0 <= rr < stato['rows'] and 0 <= cc < stato['cols']:
+                    stato['griglia'][rr][cc] = p_curr[i]
         return True
 
     @staticmethod
@@ -147,7 +144,8 @@ class MotoreArchitetto:
             for i in range(len(p)):
                 rr, cc = (r+i, c) if o == 'V' else (r, c+i)
                 if 0 <= rr < stato['rows'] and 0 <= cc < stato['cols']:
-                    temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
+                    # Sostituito esadecimale con colore rgb() per evitare conflitti Markdown
+                    temp_grid[rr][cc] = f'<span style="color: rgb(0,123,255);">{p[i]}</span>'
         
         for r in range(stato['rows']):
             html += '<tr>'
@@ -156,8 +154,11 @@ class MotoreArchitetto:
                 bg = "black" if val == "#" else "white"
                 display = val if (val != " " and val != "#") else "&nbsp;"
                 
-                numero_html = f'<div style="position: absolute; top: 2px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
-                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative; padding: 0;"><div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{numero_html}<span>{display}</span></div></td>'
+                # Sostituito colore esadecimale #555 con rgb(85,85,85)
+                numero_html = f'<div style="position: absolute; top: 2px; left: 2px; font-size: 9px; color: rgb(85,85,85);">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
+                
+                # Sostituito bordo esadecimale #444 con rgb(68,68,68)
+                html += f'<td style="border: 1px solid rgb(68,68,68); width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative; padding: 0;"><div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{numero_html}<span>{display}</span></div></td>'
             html += '</tr>'
         html += '</table>'
         return html
@@ -165,7 +166,6 @@ class MotoreArchitetto:
 def main():
     st.set_page_config(page_title="Editor Blindato", layout="wide")
     
-    # Inizializzazione dello stato nativo (Dizionario)
     if 'schema' not in st.session_state:
         st.session_state.schema = MotoreArchitetto.inizializza_stato(13, 9)
     
@@ -241,9 +241,13 @@ def main():
 
     st.title("🧩 Griglia Cruciverba")
     
-    # Rendering HTML pulito dentro un flex-box nativo per i numeretti
     codice_tabella = MotoreArchitetto.render_html(stato, anteprima_data)
-    st.markdown(codice_tabella, unsafe_allow_html=True)
+    
+    # RENDER BLINDATO: Usa st.html se supportato (evita del tutto il motore markdown)
+    if hasattr(st, "html"):
+        st.html(codice_tabella)
+    else:
+        st.markdown(codice_tabella, unsafe_allow_html=True)
     
     st.divider()
     col1, col2 = st.columns(2)
