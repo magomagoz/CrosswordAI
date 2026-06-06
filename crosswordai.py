@@ -1,5 +1,5 @@
 import streamlit as st
-import copy  # Sblocco fondamentale per la memoria di Streamlit
+import copy
 
 class MotoreArchitetto:
     def __init__(self, rows, cols):
@@ -7,8 +7,8 @@ class MotoreArchitetto:
         self.cols = cols
         self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
         self.parole_usate = []
-        self.storico_undo = [] # Mosse passate
-        self.storico_redo = [] # Mosse annullate
+        self.storico_undo = [] 
+        self.storico_redo = [] 
 
     def salva_stato(self):
         self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
@@ -103,15 +103,12 @@ class MotoreArchitetto:
                 bg = "black" if val == "#" else "white"
                 display = val if (val != " " and val != "#") else "&nbsp;"
                 
-                # Correzione: Generazione corretta del numero all'interno del tag TD
+                # HTML lineare e pulito senza ritorni a capo che ingannano Streamlit
                 numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
-
-                html += f'''<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative;">
-                    {numero_html}
-                    <div style="margin-top: 8px;">{display}</div>
-                </td>'''
+                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative;">{numero_html}<div style="padding-top: 8px;">{display}</div></td>'
             html += '</tr>'
-        return html + '</table>'
+        html += '</table>'
+        return html
 
     def calcola_numeri(self):
         numeri = {}
@@ -130,7 +127,8 @@ class MotoreArchitetto:
 def main():
     st.set_page_config(page_title="Editor Blindato", layout="wide")
     
-    if 'm' not in st.session_state: st.session_state.m = MotoreArchitetto(13, 9)
+    if 'm' not in st.session_state: 
+        st.session_state.m = MotoreArchitetto(13, 9)
     
     with st.sidebar:
         st.title("⚙️ Pannello di controllo")
@@ -163,10 +161,10 @@ def main():
                 
                 if st.button("🚀 CONFERMA E SCRIVI"):
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
-                    # Forza il salvataggio profondo clonando l'oggetto modificato
                     st.session_state.m = copy.deepcopy(st.session_state.m)
                     st.rerun()
-            else: st.error("Nessun incastro possibile.")
+            else: 
+                st.error("Nessun incastro possibile.")
 
         st.divider()
         st.subheader("⬛ Caselle Nere")
@@ -197,7 +195,7 @@ def main():
         if st.button("Rimuovi dallo schema"):
             if st.session_state.m.elimina_parola(p_del):
                 st.success(f"Parola '{p_del}' rimossa!")
-                st.session_state["del_parola"] = "" # Sintassi a dizionario corretta per evitare crash
+                st.session_state["del_parola"] = "" 
                 st.session_state.m = copy.deepcopy(st.session_state.m)
                 st.rerun()
             else:
@@ -205,13 +203,11 @@ def main():
     
         st.divider()
 
-    try:
-        st.image("banner.png")
-    except:
-        pass
-        
     st.title("🧩 Griglia Cruciverba")
-    st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
+    
+    # Questo blocco ora è totalmente sicuro e lineare
+    codice_tabella = st.session_state.m.render_html(anteprima_data)
+    st.markdown(codice_tabella, unsafe_allow_html=True)
     
     st.divider()
     col1, col2 = st.columns(2)
