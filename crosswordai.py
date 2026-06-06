@@ -176,7 +176,9 @@ def main():
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
                 if st.button("🚀 CONFERMA E SCRIVI"):
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
+                    st.session_state.m = st.session_state.m # <- TRUCCO: Forza il salvataggio!
                     st.rerun()
+
             else: st.error("Nessun incastro possibile.")
 
         st.divider()
