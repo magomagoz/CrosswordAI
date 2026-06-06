@@ -1,3 +1,4 @@
+import streamlit as st
 import os
 
 class MotoreArchitetto:
@@ -10,13 +11,12 @@ class MotoreArchitetto:
         self.storico_redo = [] # Mosse annullate
 
     def salva_stato(self):
-        # Ogni nuova azione svuota il redo (come in Word/Excel)
+        # Ogni nuova azione svuota il redo
         self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
         self.storico_redo = [] 
 
     def annulla(self):
         if self.storico_undo:
-            # Sposta stato corrente in redo
             self.storico_redo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
             stato = self.storico_undo.pop()
             self.griglia = stato['griglia']
@@ -24,7 +24,7 @@ class MotoreArchitetto:
             return True
         return False
 
-    def ripristina(self): # Tasto REDO
+    def ripristina(self):
         if self.storico_redo:
             self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
             stato = self.storico_redo.pop()
@@ -34,18 +34,18 @@ class MotoreArchitetto:
         return False
 
     def elimina_parola(self, parola_da_eliminare):
+        if not parola_da_eliminare: return False
         self.salva_stato()
         p = parola_da_eliminare.upper()
-        # Filtra le parole: tiene solo quelle diverse da quella indicata
+        # Filtra le parole
         nuova_lista = [item for item in self.parole_usate if item['p'] != p]
         
         if len(nuova_lista) == len(self.parole_usate):
-            return False # Parola non trovata
+            return False 
         
         self.parole_usate = nuova_lista
         # Ricalcola la griglia pulita
         self.griglia = [[' ' for _ in range(self.cols)] for _ in range(self.rows)]
-        # Riscrive tutte le parole rimaste
         for item in self.parole_usate:
             self._scrivi_forzato(item['p'], item['r']-1, item['c']-1, item['o'])
         return True
@@ -72,7 +72,6 @@ class MotoreArchitetto:
         validi = []
         L = len(parola)
         p_upper = parola.upper()
-        # Per ora disabilitiamo il controllo dizionario per blindare l'app
         vuota = not any(c.isalpha() for r in self.griglia for c in r)
         for r in range(self.rows):
             for c in range(self.cols):
@@ -94,6 +93,7 @@ class MotoreArchitetto:
         numeri = self.calcola_numeri()
         html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
         temp_grid = [r[:] for r in self.griglia]
+        
         if anteprima:
             p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
             for i in range(len(p)):
@@ -109,7 +109,12 @@ class MotoreArchitetto:
                 display = val if (val != " " and val != "#") else "&nbsp;"
                 numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
 
-                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg};">{display}</td>'
+                # CORREZIONE HTML: Aggiunto position: relative, {numero_html} e margin-top per la lettera
+                html += f'''
+                <td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative;">
+                    {numero_html}
+                    <div style="margin-top: 10px;">{display}</div>
+                </td>'''
             html += '</tr>'
         return html + '</table>'
 
@@ -118,16 +123,11 @@ class MotoreArchitetto:
         contatore = 1
         for r in range(self.rows):
             for c in range(self.cols):
-                if self.griglia[r][c] == '#':
-                    continue
+                if self.griglia[r][c] == '#': continue
                 
-                # È inizio orizzontale se: cella bianca, non è bordo sx (o ha una nera a sx) 
-                # e ha una cella bianca a destra.
                 inizio_o = (c == 0 or self.griglia[r][c-1] == '#') and \
                            (c + 1 < self.cols and self.griglia[r][c+1] != '#')
                 
-                # È inizio verticale se: cella bianca, non è bordo superiore (o ha una nera sopra)
-                # e ha una cella bianca sotto.
                 inizio_v = (r == 0 or self.griglia[r-1][c] == '#') and \
                            (r + 1 < self.rows and self.griglia[r+1][c] != '#')
                 
@@ -145,8 +145,6 @@ def main():
         st.title("⚙️ Pannello di controllo")
         
         st.header("📐 Seleziona Schema")
-        
-        # Dizionario con i formati predefiniti
         formati = {
             "Incroci obbligati": (13, 9),
             "Ricerca di parole crociate": (12, 14),
@@ -154,11 +152,9 @@ def main():
             "Parole crociate bifrontali": (12, 18)
         }
         
-        # Scelta tramite Selectbox
         scelta = st.selectbox("Scegli formato:", list(formati.keys()))
         rows, cols = formati[scelta]
         
-        # Bottone per applicare il cambio schema
         if st.button("Applica Schema"):
             st.session_state.m = MotoreArchitetto(rows, cols)
             st.rerun()
@@ -173,8 +169,11 @@ def main():
             if risultato:
                 idx = st.selectbox("Posizioni:", range(len(risultato)), format_func=lambda x: f"{risultato[x]['o']} - R{risultato[x]['r']+1}, C{risultato[x]['c']+1}")
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
+                
                 if st.button("🚀 CONFERMA E SCRIVI"):
                     st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
+                    # CORREZIONE: Forza l'aggiornamento dello stato per Streamlit
+                    st.session_state.m = st.session_state.m 
                     st.rerun()
             else: st.error("Nessun incastro possibile.")
 
@@ -183,16 +182,24 @@ def main():
         c1, c2 = st.columns(2)
         r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
         c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
+        
         if st.button("Metti/Togli Nera"):
-            st.session_state.m.toggle_nera(r_n, c_n); st.rerun()
+            st.session_state.m.toggle_nera(r_n, c_n)
+            # CORREZIONE
+            st.session_state.m = st.session_state.m 
+            st.rerun()
         
         st.divider()
         st.subheader("🔄 Controllo Mosse")
         c1, c2 = st.columns(2)
         if c1.button("⬅️ ANNULLA"):
-            if st.session_state.m.annulla(): st.rerun()
+            if st.session_state.m.annulla():
+                st.session_state.m = st.session_state.m
+                st.rerun()
         if c2.button("➡️ RIPRISTINA"):
-            if st.session_state.m.ripristina(): st.rerun()
+            if st.session_state.m.ripristina():
+                st.session_state.m = st.session_state.m
+                st.rerun()
     
         st.divider()
         st.subheader("🗑️ Elimina Parola")
@@ -200,24 +207,27 @@ def main():
         if st.button("Rimuovi dallo schema"):
             if st.session_state.m.elimina_parola(p_del):
                 st.success(f"Parola '{p_del}' rimossa!")
-                st.session_state.del_parola = ""
+                # CORREZIONE: Rimossa l'assegnazione che causava l'errore StreamlitAPIException
+                st.session_state.m = st.session_state.m
                 st.rerun()
             else:
                 st.error("Parola non trovata!")
     
         st.divider()
 
-    st.image("banner.png")
+    try:
+        st.image("banner.png")
+    except:
+        pass # Evita errori se non c'è il banner
+        
     st.title("🧩 Griglia Cruciverba")
     st.markdown(st.session_state.m.render_html(anteprima_data), unsafe_allow_html=True)
     
     st.divider()
-    # Creiamo due colonne sotto la griglia per dividere le liste
     col1, col2 = st.columns(2)
     
     with col1: 
         st.subheader("Orizzontali")
-        # Filtriamo solo le parole con orientamento 'O'
         orizzontali = [item for item in st.session_state.m.parole_usate if item['o'] == 'O']
         if orizzontali:
             for item in orizzontali:
@@ -227,7 +237,6 @@ def main():
 
     with col2: 
         st.subheader("Verticali")
-        # Filtriamo solo le parole con orientamento 'V'
         verticali = [item for item in st.session_state.m.parole_usate if item['o'] == 'V']
         if verticali:
             for item in verticali:
@@ -236,4 +245,4 @@ def main():
             st.write("Nessuna parola.")
 
 if __name__ == "__main__":
-   main()
+    main()
