@@ -1,135 +1,176 @@
 import streamlit as st
-import copy
 
 class MotoreArchitetto:
-    def __init__(self, rows, cols):
-        self.rows = rows
-        self.cols = cols
-        self.griglia = [[' ' for _ in range(cols)] for _ in range(rows)]
-        self.parole_usate = []
-        self.storico_undo = [] 
-        self.storico_redo = [] 
+    """
+    La classe ora contiene solo funzioni pure o metodi statici.
+    Non memorizza dati al suo interno, ma riceve e restituisce lo stato attuale.
+    """
+    @staticmethod
+    def inizializza_stato(rows, cols):
+        return {
+            'rows': rows,
+            'cols': cols,
+            'griglia': [[' ' for _ in range(cols)] for _ in range(rows)],
+            'parole_usate': [],
+            'storico_undo': [],
+            'storico_redo': []
+        }
 
-    def salva_stato(self):
-        self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
-        self.storico_redo = [] 
+    @staticmethod
+    def salva_stato(stato):
+        # Crea una copia pulita dello stato attuale prima di modificarlo
+        copia_griglia = [r[:] for r in stato['griglia']]
+        copia_parole = list(stato['parole_usate'])
+        stato['storico_undo'].append({'griglia': copia_griglia, 'parole_usate': copia_parole})
+        stato['storico_redo'] = []
 
-    def annulla(self):
-        if self.storico_undo:
-            self.storico_redo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
-            stato = self.storico_undo.pop()
-            self.griglia = stato['griglia']
-            self.parole_usate = stato['parole_usate']
+    @staticmethod
+    def annulla(stato):
+        if stato['storico_undo']:
+            copia_griglia = [r[:] for r in stato['griglia']]
+            copia_parole = list(stato['parole_usate'])
+            stato['storico_redo'].append({'griglia': copia_griglia, 'parole_usate': copia_parole})
+            
+            ultimo = stato['storico_undo'].pop()
+            stato['griglia'] = ultimo['griglia']
+            stato['parole_usate'] = ultimo['parole_usate']
             return True
         return False
 
-    def ripristina(self): 
-        if self.storico_redo:
-            self.storico_undo.append({'griglia': [r[:] for r in self.griglia], 'parole_usate': list(self.parole_usate)})
-            stato = self.storico_redo.pop()
-            self.griglia = stato['griglia']
-            self.parole_usate = stato['parole_usate']
+    @staticmethod
+    def ripristina(stato):
+        if stato['storico_redo']:
+            copia_griglia = [r[:] for r in stato['griglia']]
+            copia_parole = list(stato['parole_usate'])
+            stato['storico_undo'].append({'griglia': copia_griglia, 'parole_usate': copia_parole})
+            
+            prossimo = stato['storico_redo'].pop()
+            stato['griglia'] = prossimo['griglia']
+            stato['parole_usate'] = prossimo['parole_usate']
             return True
         return False
 
-    def elimina_parola(self, parola_da_eliminare):
-        self.salva_stato()
+    @staticmethod
+    def inserisci_parola(stato, parola, r, c, orient):
+        MotoreArchitetto.salva_stato(stato)
+        p = parola.upper()
+        
+        # Aggiunge alla lista delle parole usate se non presente
+        if not any(item['p'] == p and item['r'] == r+1 and item['c'] == c+1 for item in stato['parole_usate']):
+            stato['parole_usate'].append({'p': p, 'o': orient, 'r': r+1, 'c': c+1})
+            
+        # Scrive fisicamente sulla griglia
+        for i in range(len(p)):
+            rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
+            stato['griglia'][rr][cc] = p[i]
+
+    @staticmethod
+    def toggle_nera(stato, r, c):
+        MotoreArchitetto.salva_stato(stato)
+        stato['griglia'][r][c] = '#' if stato['griglia'][r][c] != '#' else ' '
+
+    @staticmethod
+    def elimina_parola(stato, parola_da_eliminare):
+        MotoreArchitetto.salva_stato(stato)
         p = parola_da_eliminare.upper()
-        nuova_lista = [item for item in self.parole_usate if item['p'] != p]
+        nuova_lista = [item for item in stato['parole_usate'] if item['p'] != p]
         
-        if len(nuova_lista) == len(self.parole_usate):
-            return False 
-        
-        self.parole_usate = nuova_lista
-        self.griglia = [[' ' for _ in range(self.cols)] for _ in range(self.rows)]
-        for item in self.parole_usate:
-            self._scrivi_forzato(item['p'], item['r']-1, item['c']-1, item['o'])
+        if len(nuova_lista) == len(stato['parole_usate']):
+            return False
+            
+        stato['parole_usate'] = nuova_lista
+        # Ricostruisce la griglia da zero usando le caselle nere rimaste e le parole rimaste
+        # (Per semplicità riascolta la griglia mantenendo solo le nere attuali)
+        for r in range(stato['rows']):
+            for c in range(stato['cols']):
+                if stato['griglia'][r][c] != '#':
+                    stato['griglia'][r][c] = ' '
+                    
+        for item in stato['parole_usate']:
+            p_curr, orient, r_curr, c_curr = item['p'], item['o'], item['r']-1, item['c']-1
+            for i in range(len(p_curr)):
+                rr, cc = (r_curr+i, c_curr) if orient == 'V' else (r_curr, c_curr+i)
+                stato['griglia'][rr][cc] = p_curr[i]
         return True
 
-    def _scrivi_forzato(self, p, r, c, orient):
-        for i in range(len(p)):
-            rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
-            self.griglia[rr][cc] = p[i]
-
-    def toggle_nera(self, r, c):
-        self.salva_stato()
-        self.griglia[r][c] = '#' if self.griglia[r][c] != '#' else ' '
-
-    def inserisci_parola(self, parola, r, c, orient):
-        self.salva_stato()
-        p = parola.upper()
-        if not any(item['p'] == p and item['r'] == r+1 and item['c'] == c+1 for item in self.parole_usate):
-            self.parole_usate.append({'p': p, 'o': orient, 'r': r+1, 'c': c+1})
-        for i in range(len(p)):
-            rr, cc = (r+i, c) if orient == 'V' else (r, c+i)
-            self.griglia[rr][cc] = p[i]
-
-    def trova_incastri(self, parola):
+    @staticmethod
+    def trova_incastri(stato, parola):
         validi = []
         L = len(parola)
         p_upper = parola.upper()
-        vuota = not any(c.isalpha() for r in self.griglia for c in r)
-        for r in range(self.rows):
-            for c in range(self.cols):
+        vuota = not any(c.isalpha() for r in stato['griglia'] for c in r)
+        
+        for r in range(stato['rows']):
+            for c in range(stato['cols']):
                 for o in ['O', 'V']:
-                    if (o == 'O' and c + L > self.cols) or (o == 'V' and r + L > self.rows): continue
+                    if (o == 'O' and c + L > stato['cols']) or (o == 'V' and r + L > stato['rows']): 
+                        continue
                     match, incrocio = True, False
                     for i in range(L):
                         rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                        cel = self.griglia[rr][cc]
-                        if cel == '#': match = False; break
+                        cel = stato['griglia'][rr][cc]
+                        if cel == '#': 
+                            match = False
+                            break
                         if cel.isalpha():
-                            if cel != p_upper[i]: match = False; break
+                            if cel != p_upper[i]: 
+                                match = False
+                                break
                             incrocio = True
                     if match and (vuota or incrocio):
                         validi.append({'r': r, 'c': c, 'o': o})
         return validi
-        
-    def render_html(self, anteprima=None):
-        numeri = self.calcola_numeri()
-        html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
-        temp_grid = [r[:] for r in self.griglia]
-        if anteprima:
-            p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
-            for i in range(len(p)):
-                rr, cc = (r+i, c) if o == 'V' else (r, c+i)
-                if 0 <= rr < self.rows and 0 <= cc < self.cols:
-                    temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
-        
-        for r in range(self.rows):
-            html += '<tr>'
-            for c in range(self.cols):
-                val = temp_grid[r][c]
-                bg = "black" if val == "#" else "white"
-                display = val if (val != " " and val != "#") else "&nbsp;"
-                
-                # HTML lineare e pulito senza ritorni a capo che ingannano Streamlit
-                numero_html = f'<div style="position: absolute; top: 0px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
-                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative;">{numero_html}<div style="padding-top: 8px;">{display}</div></td>'
-            html += '</tr>'
-        html += '</table>'
-        return html
 
-    def calcola_numeri(self):
+    @staticmethod
+    def calcola_numeri(stato):
         numeri = {}
         contatore = 1
-        for r in range(self.rows):
-            for c in range(self.cols):
-                if self.griglia[r][c] == '#':
+        for r in range(stato['rows']):
+            for c in range(stato['cols']):
+                if stato['griglia'][r][c] == '#':
                     continue
-                inizio_o = (c == 0 or self.griglia[r][c-1] == '#') and (c + 1 < self.cols and self.griglia[r][c+1] != '#')
-                inizio_v = (r == 0 or self.griglia[r-1][c] == '#') and (r + 1 < self.rows and self.griglia[r+1][c] != '#')
+                inizio_o = (c == 0 or stato['griglia'][r][c-1] == '#') and (c + 1 < stato['cols'] and stato['griglia'][r][c+1] != '#')
+                inizio_v = (r == 0 or stato['griglia'][r-1][c] == '#') and (r + 1 < stato['rows'] and stato['griglia'][r+1][c] != '#')
                 if inizio_o or inizio_v:
                     numeri[(r, c)] = contatore
                     contatore += 1
         return numeri
 
+    @staticmethod
+    def render_html(stato, anteprima=None):
+        numeri = MotoreArchitetto.calcola_numeri(stato)
+        html = '<table style="border-collapse: collapse; margin: 0 auto; border: 3px solid black; background-color: white;">'
+        
+        temp_grid = [r[:] for r in stato['griglia']]
+        if anteprima:
+            p, r, c, o = anteprima['p'], anteprima['r'], anteprima['c'], anteprima['o']
+            for i in range(len(p)):
+                rr, cc = (r+i, c) if o == 'V' else (r, c+i)
+                if 0 <= rr < stato['rows'] and 0 <= cc < stato['cols']:
+                    temp_grid[rr][cc] = f'<span style="color:#007bff;">{p[i]}</span>'
+        
+        for r in range(stato['rows']):
+            html += '<tr>'
+            for c in range(stato['cols']):
+                val = temp_grid[r][c]
+                bg = "black" if val == "#" else "white"
+                display = val if (val != " " and val != "#") else "&nbsp;"
+                
+                numero_html = f'<div style="position: absolute; top: 2px; left: 2px; font-size: 9px; color: #555;">{numeri[(r,c)]}</div>' if (r,c) in numeri else ""
+                html += f'<td style="border: 1px solid #444; width: 40px; height: 40px; text-align: center; font-weight: bold; background: {bg}; position: relative; padding: 0;"><div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{numero_html}<span>{display}</span></div></td>'
+            html += '</tr>'
+        html += '</table>'
+        return html
+
 def main():
     st.set_page_config(page_title="Editor Blindato", layout="wide")
     
-    if 'm' not in st.session_state: 
-        st.session_state.m = MotoreArchitetto(13, 9)
+    # Inizializzazione dello stato nativo (Dizionario)
+    if 'schema' not in st.session_state:
+        st.session_state.schema = MotoreArchitetto.inizializza_stato(13, 9)
     
+    stato = st.session_state.schema
+
     with st.sidebar:
         st.title("⚙️ Pannello di controllo")
         st.header("📐 Seleziona Schema")
@@ -145,7 +186,7 @@ def main():
         rows, cols = formati[scelta]
         
         if st.button("Applica Schema"):
-            st.session_state.m = MotoreArchitetto(rows, cols)
+            st.session_state.schema = MotoreArchitetto.inizializza_stato(rows, cols)
             st.rerun()
 
         st.divider()
@@ -154,14 +195,13 @@ def main():
         anteprima_data = None
         
         if p_in:
-            risultato = st.session_state.m.trova_incastri(p_in)
+            risultato = MotoreArchitetto.trova_incastri(stato, p_in)
             if risultato:
                 idx = st.selectbox("Posizioni:", range(len(risultato)), format_func=lambda x: f"{risultato[x]['o']} - R{risultato[x]['r']+1}, C{risultato[x]['c']+1}")
                 anteprima_data = {'p': p_in, 'r': risultato[idx]['r'], 'c': risultato[idx]['c'], 'o': risultato[idx]['o']}
                 
                 if st.button("🚀 CONFERMA E SCRIVI"):
-                    st.session_state.m.inserisci_parola(p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
-                    st.session_state.m = copy.deepcopy(st.session_state.m)
+                    MotoreArchitetto.inserisci_parola(stato, p_in, risultato[idx]['r'], risultato[idx]['c'], risultato[idx]['o'])
                     st.rerun()
             else: 
                 st.error("Nessun incastro possibile.")
@@ -169,34 +209,30 @@ def main():
         st.divider()
         st.subheader("⬛ Caselle Nere")
         c1, c2 = st.columns(2)
-        r_n = c1.number_input("Riga", 1, st.session_state.m.rows, 1) - 1
-        c_n = c2.number_input("Col", 1, st.session_state.m.cols, 1) - 1
+        r_n = c1.number_input("Riga", 1, stato['rows'], 1) - 1
+        c_n = c2.number_input("Col", 1, stato['cols'], 1) - 1
         
         if st.button("Metti/Togli Nera"):
-            st.session_state.m.toggle_nera(r_n, c_n)
-            st.session_state.m = copy.deepcopy(st.session_state.m)
+            MotoreArchitetto.toggle_nera(stato, r_n, c_n)
             st.rerun()
         
         st.divider()
         st.subheader("🔄 Controllo Mosse")
         c1, c2 = st.columns(2)
         if c1.button("⬅️ ANNULLA"):
-            if st.session_state.m.annulla(): 
-                st.session_state.m = copy.deepcopy(st.session_state.m)
+            if MotoreArchitetto.annulla(stato): 
                 st.rerun()
         if c2.button("➡️ RIPRISTINA"):
-            if st.session_state.m.ripristina(): 
-                st.session_state.m = copy.deepcopy(st.session_state.m)
+            if MotoreArchitetto.ripristina(stato): 
                 st.rerun()
     
         st.divider()
         st.subheader("🗑️ Elimina Parola")
         p_del = st.text_input("Scrivi parola da rimuovere:", key="del_parola").upper().strip()
         if st.button("Rimuovi dallo schema"):
-            if st.session_state.m.elimina_parola(p_del):
+            if MotoreArchitetto.elimina_parola(stato, p_del):
                 st.success(f"Parola '{p_del}' rimossa!")
                 st.session_state["del_parola"] = "" 
-                st.session_state.m = copy.deepcopy(st.session_state.m)
                 st.rerun()
             else:
                 st.error("Parola non trovata!")
@@ -205,8 +241,8 @@ def main():
 
     st.title("🧩 Griglia Cruciverba")
     
-    # Questo blocco ora è totalmente sicuro e lineare
-    codice_tabella = st.session_state.m.render_html(anteprima_data)
+    # Rendering HTML pulito dentro un flex-box nativo per i numeretti
+    codice_tabella = MotoreArchitetto.render_html(stato, anteprima_data)
     st.markdown(codice_tabella, unsafe_allow_html=True)
     
     st.divider()
@@ -214,7 +250,7 @@ def main():
     
     with col1: 
         st.subheader("Orizzontali")
-        orizzontali = [item for item in st.session_state.m.parole_usate if item['o'] == 'O']
+        orizzontali = [item for item in stato['parole_usate'] if item['o'] == 'O']
         if orizzontali:
             for item in orizzontali:
                 st.write(f"R{item['r']} C{item['c']}: **{item['p']}**")
@@ -223,7 +259,7 @@ def main():
 
     with col2: 
         st.subheader("Verticali")
-        verticali = [item for item in st.session_state.m.parole_usate if item['o'] == 'V']
+        verticali = [item for item in stato['parole_usate'] if item['o'] == 'V']
         if verticali:
             for item in verticali:
                 st.write(f"R{item['r']} C{item['c']}: **{item['p']}**")
